@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-purple-50 via-white to-pink-50 min-h-screen;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold
+           hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg
+           hover:shadow-xl transform hover:-translate-y-0.5;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold border-2 border-purple-600
+           hover:bg-purple-50 transition-all duration-300;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-xl p-6 backdrop-blur-sm bg-opacity-90;
+  }
+
+  /* When pages are rendered on the dark dashboard background, keep cards readable but cohesive. */
+  .layout-dark .card {
+    @apply bg-black/25 border border-white/10 shadow-2xl backdrop-blur-xl;
+  }
+
+  .layout-dark .input-field {
+    @apply bg-black/20 border-white/15 text-white placeholder:text-white/40 focus:border-purple-400 focus:ring-purple-400/20;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-purple-500
+           focus:ring-2 focus:ring-purple-200 transition-all duration-200 outline-none;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent;
+  }
+
+  .page-title {
+    @apply text-3xl font-bold gradient-text mb-2;
+  }
+
+  .layout-dark .page-title {
+    @apply text-white;
+  }
+
+  .page-subtitle {
+    @apply text-gray-600;
+  }
+
+  .layout-dark .page-subtitle {
+    @apply text-white/70;
+  }
+
+  .layout-dark .alert {
+    @apply bg-white/10 text-white border border-white/10;
+  }
+
+  .layout-dark .alert.bg-red-50 {
+    @apply bg-red-400/15 text-red-200 border-red-400/20;
+  }
+
+  .layout-dark .alert.bg-yellow-50 {
+    @apply bg-yellow-400/15 text-yellow-200 border-yellow-400/20;
+  }
+
+  .layout-dark .alert.bg-green-50 {
+    @apply bg-green-400/15 text-green-200 border-green-400/20;
+  }
+
+  .layout-dark .alert.bg-blue-50 {
+    @apply bg-blue-400/15 text-blue-200 border-blue-400/20;
+  }
+}
+
+/* Scrollbar personalizzata */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #9333ea, #db2777);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #7e22ce, #be185d);
+}
+
+/* Animazioni personalizzate */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.shimmer {
+  animation: shimmer 2s infinite;
+  background: linear-gradient(
+    to right,
+    #f6f7f8 0%,
+    #edeef1 20%,
+    #f6f7f8 40%,
+    #f6f7f8 100%
+  );
+  background-size: 1000px 100%;
+}

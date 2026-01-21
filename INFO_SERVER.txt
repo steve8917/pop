@@ -1,0 +1,79 @@
+════════════════════════════════════════════════════════════
+  SISTEMA TURNI - TESTIMONIANZA PUBBLICA
+  Server Attivi e Pronti!
+════════════════════════════════════════════════════════════
+
+✅ BACKEND SERVER
+   URL: http://localhost:5001
+   Status: RUNNING
+   Database: MongoDB (localhost:27017/tepustatuto)
+   
+✅ FRONTEND WEB APP
+   URL: http://localhost:5173
+   Status: RUNNING
+   Framework: React + Vite
+
+════════════════════════════════════════════════════════════
+
+🌐 APRI L'APPLICAZIONE:
+   
+   Vai su http://localhost:5173 nel tuo browser
+
+════════════════════════════════════════════════════════════
+
+📝 PRIMO ACCESSO:
+
+1. Clicca "Registrati"
+2. Compila il form di registrazione
+3. Accedi con le tue credenziali
+
+════════════════════════════════════════════════════════════
+
+🔧 PER DIVENTARE ADMIN:
+
+Opzione 1 - MongoDB Compass:
+  1. Apri MongoDB Compass
+  2. Connetti a: mongodb://localhost:27017
+  3. Database: tepustatuto
+  4. Collection: users
+  5. Trova il tuo utente
+  6. Cambia role da "user" a "admin"
+
+Opzione 2 - Terminal:
+  mongosh
+  use tepustatuto
+  db.users.updateOne(
+    { email: "tua@email.com" },
+    { \$set: { role: "admin" } }
+  )
+  exit
+
+════════════════════════════════════════════════════════════
+
+⚙️ CONFIGURAZIONE EMAIL (Opzionale):
+
+Modifica il file .env:
+  EMAIL_USER=tua_email@gmail.com
+  EMAIL_PASSWORD=app_password_gmail
+
+Come ottenere App Password Gmail:
+  1. https://myaccount.google.com/security
+  2. Attiva verifica 2 passaggi
+  3. Genera "Password per le app"
+  4. Usa quella password nel .env
+
+════════════════════════════════════════════════════════════
+
+📚 DOCUMENTAZIONE:
+   - README.md (documentazione completa)
+   - AVVIO_RAPIDO.md (guida rapida)
+
+════════════════════════════════════════════════════════════
+
+🛑 PER FERMARE I SERVER:
+   
+   Premi Ctrl+C nei terminali dove sono in esecuzione
+
+════════════════════════════════════════════════════════════
+
+Buon lavoro! 🙏

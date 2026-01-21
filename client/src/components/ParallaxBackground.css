@@ -1,0 +1,35 @@
+.parallax-bg {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  z-index: 0;
+}
+
+.parallax-bg-overlay {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  z-index: 1;
+  backdrop-filter: blur(1px);
+}
+
+.parallax-bg-overlay--light {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.parallax-bg-overlay--dark {
+  background:
+    radial-gradient(900px 500px at 20% 15%, rgba(147, 51, 234, 0.28), transparent 55%),
+    radial-gradient(700px 450px at 80% 25%, rgba(219, 39, 119, 0.22), transparent 60%),
+    radial-gradient(800px 500px at 55% 85%, rgba(56, 189, 248, 0.18), transparent 60%),
+    linear-gradient(180deg, rgba(6, 6, 18, 0.82) 0%, rgba(10, 10, 24, 0.86) 50%, rgba(6, 6, 18, 0.88) 100%);
+}
+
+@media (max-width: 768px) {
+  .parallax-bg {
+    background-attachment: scroll;
+  }
+}

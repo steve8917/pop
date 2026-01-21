@@ -1,0 +1,298 @@
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import dotenv from 'dotenv';
+import path from 'path';
+import { connectDatabase } from './config/database';
+import { errorHandler } from './middleware/errorHandler';
+import authRoutes from './routes/authRoutes';
+import availabilityRoutes from './routes/availabilityRoutes';
+import scheduleRoutes from './routes/scheduleRoutes';
+import notificationRoutes from './routes/notificationRoutes';
+import chatRoomRoutes from './routes/chatRoom';
+import experienceRoutes from './routes/experienceRoutes';
+import Message from './models/Message';
+import User from './models/User';
+import ChatRoom from './models/ChatRoom';
+import Schedule from './models/Schedule';
+
+// Carica variabili d'ambiente
+dotenv.config();
+
+const app = express();
+
+// Se siamo dietro un reverse proxy (es. Nginx) in produzione
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true
+  }
+});
+
+// Middleware
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/availability', availabilityRoutes);
+app.use('/api/schedule', scheduleRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/chat-room', chatRoomRoutes);
+app.use('/api/experiences', experienceRoutes);
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Server is running' });
+});
+
+// In produzione serviamo anche il client (Vite build) sullo stesso dominio
+if (process.env.NODE_ENV === 'production') {
+  const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
+  app.use(express.static(clientDistPath));
+
+  // SPA fallback (non intercettare API o socket)
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
+      next();
+      return;
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
+
+// Error handler
+app.use(errorHandler);
+
+// Socket.IO per notifiche in tempo reale e chat
+const connectedUsers = new Map<string, string>();
+const chatUsers = new Set<string>();
+
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  // Autenticazione per notifiche
+  socket.on('authenticate', (userId: string) => {
+    connectedUsers.set(userId, socket.id);
+    console.log(`User ${userId} authenticated with socket ${socket.id}`);
+  });
+
+  // Join chat
+  socket.on('join-chat', async (userId: string) => {
+    chatUsers.add(socket.id);
+    connectedUsers.set(userId, socket.id);
+
+    // Invia conteggio utenti online
+    io.emit('online-users', chatUsers.size);
+
+    // Invia storico messaggi (ultimi 50)
+    try {
+      const messages = await Message.find()
+        .populate('user', 'firstName lastName gender')
+        .sort({ timestamp: -1 })
+        .limit(50);
+
+      socket.emit('chat-history', messages.reverse());
+    } catch (error) {
+      console.error('Errore caricamento messaggi:', error);
+    }
+  });
+
+  // Invia messaggio chat globale
+  socket.on('send-message', async (data: { message: string; userId: string; userInfo: any }) => {
+    try {
+      const newMessage = await Message.create({
+        user: data.userId,
+        message: data.message
+      });
+
+      const populatedMessage = await Message.findById(newMessage._id)
+        .populate('user', 'firstName lastName gender');
+
+      // Invia a tutti gli utenti connessi
+      io.emit('chat-message', populatedMessage);
+    } catch (error) {
+      console.error('Errore invio messaggio:', error);
+    }
+  });
+
+  // JOIN TURNO CHAT ROOM
+  socket.on('join-schedule-chat', async (data: { scheduleId: string; userId: string }) => {
+    try {
+      const roomId = `schedule-${data.scheduleId}`;
+      socket.join(roomId);
+      console.log(`User ${data.userId} joined room ${roomId}`);
+
+      // Carica o crea la chat room
+      let chatRoom = await ChatRoom.findOne({ schedule: data.scheduleId })
+        .populate('messages.user', 'firstName lastName gender');
+
+      if (!chatRoom) {
+        // Crea la chat room se non esiste
+        const schedule = await Schedule.findById(data.scheduleId);
+        if (schedule) {
+          const participants = schedule.assignedUsers.map((au: any) => au.user);
+          chatRoom = await ChatRoom.create({
+            schedule: data.scheduleId,
+            participants,
+            messages: []
+          });
+          console.log(`Created new chat room for schedule ${data.scheduleId}`);
+        }
+      }
+
+      if (chatRoom) {
+        socket.emit('schedule-chat-history', chatRoom.messages);
+      }
+
+      // Notifica partecipanti che qualcuno è entrato
+      socket.to(roomId).emit('user-joined-schedule-chat', {
+        userId: data.userId
+      });
+    } catch (error) {
+      console.error('Errore join schedule chat:', error);
+    }
+  });
+
+  // LEAVE TURNO CHAT ROOM
+  socket.on('leave-schedule-chat', (data: { scheduleId: string; userId: string }) => {
+    const roomId = `schedule-${data.scheduleId}`;
+    socket.leave(roomId);
+    console.log(`User ${data.userId} left room ${roomId}`);
+
+    // Notifica partecipanti che qualcuno è uscito
+    socket.to(roomId).emit('user-left-schedule-chat', {
+      userId: data.userId
+    });
+  });
+
+  // INVIA MESSAGGIO TURNO CHAT ROOM
+  socket.on('send-schedule-message', async (data: {
+    scheduleId: string;
+    message: string;
+    userId: string;
+    userInfo: any;
+  }) => {
+    try {
+      const roomId = `schedule-${data.scheduleId}`;
+
+      // Carica o crea la chat room
+      let chatRoom = await ChatRoom.findOne({ schedule: data.scheduleId });
+
+      if (!chatRoom) {
+        // Crea la chat room se non esiste
+        const schedule = await Schedule.findById(data.scheduleId);
+        if (schedule) {
+          const participants = schedule.assignedUsers.map((au: any) => au.user);
+          chatRoom = await ChatRoom.create({
+            schedule: data.scheduleId,
+            participants,
+            messages: []
+          });
+          console.log(`Created new chat room for schedule ${data.scheduleId}`);
+        }
+      }
+
+      if (chatRoom) {
+        chatRoom.messages.push({
+          user: data.userId as any,
+          message: data.message,
+          timestamp: new Date()
+        });
+
+        await chatRoom.save();
+
+        // Popola l'ultimo messaggio
+        const updatedChatRoom = await ChatRoom.findById(chatRoom._id)
+          .populate('messages.user', 'firstName lastName gender');
+
+        const lastMessage = updatedChatRoom?.messages[updatedChatRoom.messages.length - 1];
+
+        console.log('Sending message to room:', roomId, lastMessage);
+
+        // Invia a tutti nella room
+        io.to(roomId).emit('schedule-chat-message', lastMessage);
+
+        // Invia notifica a tutti i partecipanti del turno (anche quelli non nella chat room in questo momento)
+        if (chatRoom.participants && chatRoom.participants.length > 0) {
+          console.log('📢 Sending notifications to participants:', chatRoom.participants.length);
+          for (const participantId of chatRoom.participants) {
+            const participantIdStr = participantId.toString();
+            console.log(`Checking participant: ${participantIdStr}, sender: ${data.userId}`);
+            // Invia notifica solo se non è il mittente
+            if (participantIdStr !== data.userId) {
+              const socketId = connectedUsers.get(participantIdStr);
+              console.log(`Participant ${participantIdStr} socket: ${socketId}`);
+              if (socketId) {
+                console.log(`✅ Sending notification to ${participantIdStr} via socket ${socketId}`);
+                io.to(socketId).emit('schedule-message-notification', {
+                  scheduleId: data.scheduleId,
+                  senderId: data.userId
+                });
+              } else {
+                console.log(`⚠️ Participant ${participantIdStr} not connected`);
+              }
+            } else {
+              console.log(`⏭️ Skipping sender ${participantIdStr}`);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Errore invio messaggio schedule:', error);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    chatUsers.delete(socket.id);
+    io.emit('online-users', chatUsers.size);
+
+    for (const [userId, socketId] of connectedUsers.entries()) {
+      if (socketId === socket.id) {
+        connectedUsers.delete(userId);
+        console.log(`User ${userId} disconnected`);
+        break;
+      }
+    }
+  });
+});
+
+// Funzione per inviare notifiche in tempo reale
+export const sendRealtimeNotification = (userId: string, notification: any) => {
+  const socketId = connectedUsers.get(userId);
+  if (socketId) {
+    io.to(socketId).emit('notification', notification);
+  }
+};
+
+// Connessione al database e avvio server
+const PORT = process.env.PORT || 5000;
+
+const startServer = async () => {
+  try {
+    await connectDatabase();
+    httpServer.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
+
+export { io };

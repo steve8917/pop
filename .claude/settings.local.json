@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npm run server:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(npm run dev:*)",
+      "Bash(mongosh tepustatuto:*)",
+      "Bash(node:*)",
+      "Bash(mongosh:*)"
+    ]
+  }
+}
