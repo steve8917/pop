@@ -11,3 +11,5 @@ yarn-error.log*
 client/node_modules/
 client/dist/
 client/.env
+
+*.zip

@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { type Socket } from 'socket.io-client';
 import { toast } from 'react-hot-toast';
 import api from '../utils/api';
 import { useAuth } from './AuthContext';
+import { createAppSocket } from '../utils/socket';
 
 interface Notification {
   _id: string;
@@ -34,9 +35,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       fetchNotifications();
 
       // Connessione Socket.IO
-      const newSocket = io('http://localhost:5001', {
-        withCredentials: true
-      });
+      const newSocket = createAppSocket();
 
       newSocket.on('connect', () => {
         console.log('Socket connected');

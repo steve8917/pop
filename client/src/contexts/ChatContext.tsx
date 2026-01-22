@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { type Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { useLocation } from 'react-router-dom';
+import { createAppSocket } from '../utils/socket';
 
 interface Message {
   _id?: string;
@@ -38,9 +39,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!user) return;
 
-    const newSocket = io('http://localhost:5001', {
-      withCredentials: true
-    });
+    const newSocket = createAppSocket();
 
     newSocket.on('connect', () => {
       console.log('Chat socket connected');

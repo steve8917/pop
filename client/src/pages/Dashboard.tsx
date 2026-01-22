@@ -3,11 +3,11 @@ import { Calendar, Users, CheckCircle, MessageCircle, BookOpen } from 'lucide-re
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
 import { useLocation } from 'react-router-dom';
 import api from '../utils/api';
 import DashboardCarousel from '../components/DashboardCarousel';
 import { dashboardCarouselSlides } from '../data/dashboardCarouselSlides';
+import { createAppSocket } from '../utils/socket';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -19,7 +19,7 @@ const Dashboard = () => {
   useEffect(() => {
     let socket: any;
     if (user) {
-      socket = io('http://localhost:5001', { withCredentials: true });
+      socket = createAppSocket();
       socket.on('connect', () => {
         console.log('[DASHBOARD] Socket connected');
         socket.emit('authenticate', user.id);
@@ -123,7 +123,7 @@ const Dashboard = () => {
             Benvenuto/a, {user?.firstName}!
           </h1>
           <p className="text-white/75">
-            {user?.gender === 'male' ? 'Fratello' : 'Sorella'} - Sistema Gestione Turni
+            {user?.gender === 'male' ? 'Fratello' : 'Sorella'} - TepuApp
           </p>
         </motion.div>
 

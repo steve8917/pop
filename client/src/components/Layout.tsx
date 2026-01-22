@@ -84,7 +84,12 @@ const Layout = () => {
           <div className="flex justify-between items-center py-4">
             {/* Logo */}
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-white">Sistema Turni</h1>
+              <NavLink
+                to="/dashboard"
+                className="text-2xl font-bold text-white hover:text-white/90 transition-colors"
+              >
+                TepuApp
+              </NavLink>
             </div>
 
             {/* Desktop Navigation */}

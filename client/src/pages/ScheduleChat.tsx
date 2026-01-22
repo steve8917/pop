@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
-import { io, Socket } from 'socket.io-client';
+import { type Socket } from 'socket.io-client';
 import { ArrowLeft, Send, Users, Calendar, MapPin, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { createAppSocket } from '../utils/socket';
 
 interface Message {
   _id?: string;
@@ -67,9 +68,7 @@ const ScheduleChat = () => {
     markAsRead();
 
     // Connessione Socket.IO
-    const newSocket = io('http://localhost:5001', {
-      withCredentials: true
-    });
+    const newSocket = createAppSocket();
 
     newSocket.on('connect', () => {
       console.log('Schedule chat socket connected');

@@ -3,9 +3,9 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
-import { io } from 'socket.io-client';
 import { toast } from 'react-hot-toast';
 import { Calendar, MapPin, Clock, User, MessageCircle } from 'lucide-react';
+import { createAppSocket } from '../utils/socket';
 
 interface ScheduleItem {
   _id: string;
@@ -62,9 +62,7 @@ const Schedule = () => {
   useEffect(() => {
     if (!user) return;
 
-    const newSocket = io('http://localhost:5001', {
-      withCredentials: true
-    });
+    const newSocket = createAppSocket();
 
     newSocket.on('connect', () => {
       console.log('Schedule page socket connected');

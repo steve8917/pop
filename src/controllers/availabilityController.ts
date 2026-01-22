@@ -4,7 +4,7 @@ import User from '../models/User';
 import Notification from '../models/Notification';
 import Schedule from '../models/Schedule';
 import { AuthRequest } from '../types';
-import { io } from '../server';
+import { io, sendRealtimeNotification } from '../server';
 
 export const submitAvailability = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -32,6 +32,48 @@ export const submitAvailability = async (req: AuthRequest, res: Response): Promi
       message: 'Le tue disponibilità sono state inviate e sono in attesa di conferma',
       type: 'availability'
     });
+
+    // Notifica admin se arriva una disponibilità "istantanea" (a brevissimo termine)
+    // Nota: non esiste un flag esplicito nel DB, quindi usiamo una regola temporale.
+    try {
+      const nowMs = Date.now();
+      const instantWindowMs = 48 * 60 * 60 * 1000; // 48 ore
+      const gracePastMs = 24 * 60 * 60 * 1000; // tolleranza per timezone/UTC (fino a 24h nel passato)
+
+      const instantAvailabilities = createdAvailabilities.filter((a: any) => {
+        const d = a?.date instanceof Date ? a.date.getTime() : new Date(a?.date).getTime();
+        return d >= nowMs - gracePastMs && d <= nowMs + instantWindowMs;
+      });
+
+      if (instantAvailabilities.length > 0) {
+        const submitter = await User.findById(userId).select('firstName lastName');
+        const submitterName = submitter
+          ? `${submitter.firstName} ${submitter.lastName}`
+          : 'un utente';
+
+        const admins = await User.find({ role: 'admin', isActive: true }).select('_id');
+        if (admins.length > 0) {
+          const first = instantAvailabilities[0];
+          const when = first?.date ? new Date(first.date).toLocaleDateString('it-IT') : '';
+          const where = first?.shift?.location ? ` (${first.shift.location})` : '';
+          const countSuffix = instantAvailabilities.length > 1 ? ` (+${instantAvailabilities.length - 1})` : '';
+
+          const message = `Disponibilità istantanea inserita da ${submitterName} per ${when}${where}${countSuffix}`;
+
+          for (const admin of admins) {
+            const adminId = admin._id.toString();
+            const created = await Notification.create({
+              user: adminId,
+              message,
+              type: 'availability'
+            });
+            sendRealtimeNotification(adminId, created);
+          }
+        }
+      }
+    } catch (notifyErr) {
+      console.error('Errore notifica admin disponibilità istantanea:', notifyErr);
+    }
 
     res.status(201).json({
       success: true,
