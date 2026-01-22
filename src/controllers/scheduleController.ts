@@ -3,6 +3,27 @@ import Schedule from '../models/Schedule';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../types';
 
+const normalizeDateOnly = (input: unknown): Date => {
+  if (typeof input === 'string') {
+    const m = input.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) {
+      const y = Number(m[1]);
+      const mo = Number(m[2]);
+      const d = Number(m[3]);
+      return new Date(Date.UTC(y, mo - 1, d, 12, 0, 0, 0));
+    }
+  }
+
+  const date = new Date(input as any);
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 12, 0, 0, 0));
+};
+
+const getUtcMonthRange = (month: number, year: number): { start: Date; end: Date } => {
+  const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+  const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+  return { start, end };
+};
+
 export const createSchedule = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { shift, date, assignedUsers } = req.body;
@@ -21,9 +42,11 @@ export const createSchedule = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
+    const normalizedDate = normalizeDateOnly(date);
+
     const schedule = await Schedule.create({
       shift,
-      date: new Date(date),
+      date: normalizedDate,
       assignedUsers,
       isConfirmed: true
     });
@@ -32,7 +55,7 @@ export const createSchedule = async (req: AuthRequest, res: Response): Promise<v
     for (const assignment of assignedUsers) {
       await Notification.create({
         user: assignment.user,
-        message: `Sei stato assegnato al turno del ${new Date(date).toLocaleDateString('it-IT')} presso ${shift.location}`,
+        message: `Sei stato assegnato al turno del ${normalizedDate.toLocaleDateString('it-IT')} presso ${shift.location}`,
         type: 'schedule'
       });
     }
@@ -60,8 +83,9 @@ export const getMonthlySchedule = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    const startDate = new Date(parseInt(year as string), parseInt(month as string) - 1, 1);
-    const endDate = new Date(parseInt(year as string), parseInt(month as string), 0, 23, 59, 59);
+    const m = parseInt(month as string);
+    const y = parseInt(year as string);
+    const { start: startDate, end: endDate } = getUtcMonthRange(m, y);
 
     console.log('Fetching schedules for date range:', startDate, 'to', endDate);
 
@@ -173,9 +197,10 @@ export const getUserSchedule = async (req: AuthRequest, res: Response): Promise<
     };
 
     if (month && year) {
-      const startDate = new Date(parseInt(year as string), parseInt(month as string) - 1, 1);
-      const endDate = new Date(parseInt(year as string), parseInt(month as string), 0, 23, 59, 59);
-      query.date = { $gte: startDate, $lte: endDate };
+      const m = parseInt(month as string);
+      const y = parseInt(year as string);
+      const { start, end } = getUtcMonthRange(m, y);
+      query.date = { $gte: start, $lte: end };
     }
 
     const schedules = await Schedule.find(query)

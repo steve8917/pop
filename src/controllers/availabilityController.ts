@@ -6,6 +6,37 @@ import Schedule from '../models/Schedule';
 import { AuthRequest } from '../types';
 import { io, sendRealtimeNotification } from '../server';
 
+const normalizeDateOnly = (input: unknown): Date => {
+  if (typeof input === 'string') {
+    const m = input.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) {
+      const y = Number(m[1]);
+      const mo = Number(m[2]);
+      const d = Number(m[3]);
+      return new Date(Date.UTC(y, mo - 1, d, 12, 0, 0, 0));
+    }
+  }
+
+  const date = new Date(input as any);
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 12, 0, 0, 0));
+};
+
+const getUtcMonthRange = (month: number, year: number): { start: Date; end: Date } => {
+  const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+  const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+  return { start, end };
+};
+
+const getUtcDayRange = (date: Date): { start: Date; end: Date } => {
+  const y = date.getUTCFullYear();
+  const m = date.getUTCMonth();
+  const d = date.getUTCDate();
+  return {
+    start: new Date(Date.UTC(y, m, d, 0, 0, 0, 0)),
+    end: new Date(Date.UTC(y, m, d, 23, 59, 59, 999))
+  };
+};
+
 export const submitAvailability = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { availabilities } = req.body;
@@ -21,7 +52,7 @@ export const submitAvailability = async (req: AuthRequest, res: Response): Promi
       availabilities.map((av: any) => ({
         user: userId,
         shift: av.shift,
-        date: new Date(av.date),
+        date: normalizeDateOnly(av.date),
         status: 'pending'
       }))
     );
@@ -99,9 +130,10 @@ export const getUserAvailabilities = async (req: AuthRequest, res: Response): Pr
     let query: any = { user: userId };
 
     if (month && year) {
-      const startDate = new Date(parseInt(year as string), parseInt(month as string) - 1, 1);
-      const endDate = new Date(parseInt(year as string), parseInt(month as string), 0);
-      query.date = { $gte: startDate, $lte: endDate };
+      const m = parseInt(month as string);
+      const y = parseInt(year as string);
+      const { start, end } = getUtcMonthRange(m, y);
+      query.date = { $gte: start, $lte: end };
     }
 
     const availabilities = await Availability.find(query).sort({ date: 1 });
@@ -122,9 +154,10 @@ export const getAllAvailabilities = async (req: AuthRequest, res: Response): Pro
     let query: any = {};
 
     if (month && year) {
-      const startDate = new Date(parseInt(year as string), parseInt(month as string) - 1, 1);
-      const endDate = new Date(parseInt(year as string), parseInt(month as string), 0);
-      query.date = { $gte: startDate, $lte: endDate };
+      const m = parseInt(month as string);
+      const y = parseInt(year as string);
+      const { start, end } = getUtcMonthRange(m, y);
+      query.date = { $gte: start, $lte: end };
     }
 
     if (status) {
@@ -230,9 +263,12 @@ async function autoCreateSchedule(availability: any): Promise<void> {
     console.log('🔍 AutoCreateSchedule - Date:', availability.date);
     console.log('🔍 AutoCreateSchedule - Shift:', availability.shift);
 
+    const normalizedDate = normalizeDateOnly(availability.date);
+    const { start, end } = getUtcDayRange(normalizedDate);
+
     // Cerca se esiste già un programma per questa data e turno
     let schedule = await Schedule.findOne({
-      date: availability.date,
+      date: { $gte: start, $lte: end },
       'shift.day': availability.shift.day,
       'shift.location': availability.shift.location,
       'shift.startTime': availability.shift.startTime,
@@ -290,7 +326,7 @@ async function autoCreateSchedule(availability: any): Promise<void> {
           startTime: availability.shift.startTime,
           endTime: availability.shift.endTime
         },
-        date: availability.date,
+        date: normalizedDate,
         assignedUsers: [
           {
             user: user._id,

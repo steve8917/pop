@@ -21,6 +21,13 @@ const DAY_NAMES: { [key: string]: string } = {
   sunday: 'Domenica'
 };
 
+const formatLocalDate = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 const Availability = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -146,7 +153,7 @@ const Availability = () => {
       {/* Shifts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {dates.map(({ date, shift }, index) => {
-          const dateStr = date.toISOString().split('T')[0];
+          const dateStr = formatLocalDate(date);
           const key = `${dateStr}|${shift.location}|${shift.startTime}`;
           const isSelected = selectedAvailabilities.has(key);
 
