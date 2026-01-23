@@ -149,9 +149,9 @@ export const getUserAvailabilities = async (req: AuthRequest, res: Response): Pr
 
 export const getAllAvailabilities = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { month, year, status } = req.query;
+    const { month, year, status, day } = req.query;
 
-    let query: any = {};
+    const query: Record<string, any> = {};
 
     if (month && year) {
       const m = parseInt(month as string);
@@ -162,6 +162,10 @@ export const getAllAvailabilities = async (req: AuthRequest, res: Response): Pro
 
     if (status) {
       query.status = status;
+    }
+
+    if (day) {
+      query['shift.day'] = day;
     }
 
     const availabilities = await Availability.find(query)
@@ -224,6 +228,7 @@ export const deleteAvailability = async (req: AuthRequest, res: Response): Promi
   try {
     const { id } = req.params;
     const userId = req.user?.userId;
+    const isAdmin = req.user?.role === 'admin';
 
     const availability = await Availability.findById(id);
     if (!availability) {
@@ -231,10 +236,43 @@ export const deleteAvailability = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    // Verifica che l'utente possa eliminare solo le proprie disponibilità
-    if (availability.user.toString() !== userId && req.user?.role !== 'admin') {
+    // Verifica che l'utente possa eliminare solo le proprie disponibilità oppure sia admin
+    if (availability.user.toString() !== userId && !isAdmin) {
       res.status(403).json({ message: 'Non autorizzato' });
       return;
+    }
+
+    // Se esiste un programma associato, rimuove l'assegnazione e aggiorna lo stato
+    try {
+      const normalizedDate = normalizeDateOnly(availability.date);
+      const { start, end } = getUtcDayRange(normalizedDate);
+
+      const schedule = await Schedule.findOne({
+        date: { $gte: start, $lte: end },
+        'shift.day': availability.shift.day,
+        'shift.location': availability.shift.location,
+        'shift.startTime': availability.shift.startTime,
+        'shift.endTime': availability.shift.endTime
+      });
+
+      if (schedule) {
+        schedule.assignedUsers = schedule.assignedUsers.filter(
+          (assignment: any) => assignment.user.toString() !== availability.user.toString()
+        );
+
+        if (schedule.assignedUsers.length === 0) {
+          await Schedule.findByIdAndDelete(schedule._id);
+        } else {
+          const males = schedule.assignedUsers.filter((u: any) => u.gender === 'male').length;
+          const females = schedule.assignedUsers.filter((u: any) => u.gender === 'female').length;
+          schedule.isConfirmed = males >= 1 && females >= 1 && females <= 2;
+          await schedule.save();
+        }
+
+        io.emit('schedule-updated');
+      }
+    } catch (scheduleErr) {
+      console.error('Errore durante la pulizia del programma:', scheduleErr);
     }
 
     await Availability.findByIdAndDelete(id);

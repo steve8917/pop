@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import api from '../utils/api';
-import { CheckCircle, XCircle, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Trash2 } from 'lucide-react';
 
 interface Availability {
   _id: string;
@@ -30,19 +30,38 @@ const DAY_NAMES: { [key: string]: string } = {
   sunday: 'Domenica'
 };
 
+const DAY_FILTERS: { value: 'all' | 'monday' | 'thursday' | 'friday' | 'saturday' | 'sunday'; label: string }[] = [
+  { value: 'all', label: 'Tutti i giorni' },
+  { value: 'monday', label: 'Lunedì' },
+  { value: 'thursday', label: 'Giovedì' },
+  { value: 'friday', label: 'Venerdì' },
+  { value: 'saturday', label: 'Sabato' },
+  { value: 'sunday', label: 'Domenica' }
+];
+
 const AdminDashboard = () => {
   const [availabilities, setAvailabilities] = useState<Availability[]>([]);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed'>('pending');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed'>('pending');
+  const [dayFilter, setDayFilter] = useState<'all' | 'monday' | 'thursday' | 'friday' | 'saturday' | 'sunday'>('all');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     fetchAvailabilities();
-  }, [filter]);
+  }, [statusFilter, dayFilter]);
 
   const fetchAvailabilities = async () => {
     setIsLoading(true);
     try {
-      const params = filter !== 'all' ? { status: filter } : {};
+      const params: Record<string, string> = {};
+
+      if (statusFilter !== 'all') {
+        params.status = statusFilter;
+      }
+
+      if (dayFilter !== 'all') {
+        params.day = dayFilter;
+      }
+
       const { data } = await api.get('/availability/all', { params });
       setAvailabilities(data.availabilities);
     } catch (error) {
@@ -59,6 +78,19 @@ const AdminDashboard = () => {
       fetchAvailabilities();
     } catch (error) {
       toast.error('Errore durante l\'aggiornamento');
+    }
+  };
+
+  const handleDeleteAvailability = async (id: string) => {
+    const confirmed = window.confirm('Confermi di voler eliminare questo turno?');
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/availability/${id}`);
+      toast.success('Disponibilità eliminata');
+      fetchAvailabilities();
+    } catch (error) {
+      toast.error('Errore durante l\'eliminazione');
     }
   };
 
@@ -108,9 +140,9 @@ const AdminDashboard = () => {
       <div className="card">
         <div className="flex gap-2">
           <button
-            onClick={() => setFilter('pending')}
+            onClick={() => setStatusFilter('pending')}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              filter === 'pending'
+              statusFilter === 'pending'
                 ? 'bg-purple-600 text-white'
                 : 'bg-white/10 text-white/80 hover:bg-white/15'
             }`}
@@ -118,9 +150,9 @@ const AdminDashboard = () => {
             In Attesa
           </button>
           <button
-            onClick={() => setFilter('confirmed')}
+            onClick={() => setStatusFilter('confirmed')}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              filter === 'confirmed'
+              statusFilter === 'confirmed'
                 ? 'bg-purple-600 text-white'
                 : 'bg-white/10 text-white/80 hover:bg-white/15'
             }`}
@@ -128,15 +160,29 @@ const AdminDashboard = () => {
             Confermate
           </button>
           <button
-            onClick={() => setFilter('all')}
+            onClick={() => setStatusFilter('all')}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              filter === 'all'
+              statusFilter === 'all'
                 ? 'bg-purple-600 text-white'
                 : 'bg-white/10 text-white/80 hover:bg-white/15'
             }`}
           >
             Tutte
           </button>
+          <div className="ml-auto">
+            <label className="text-white/80 text-sm mr-2">Giorno</label>
+            <select
+              value={dayFilter}
+              onChange={(e) => setDayFilter(e.target.value as typeof dayFilter)}
+              className="bg-white/10 text-white px-3 py-2 rounded-lg border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              {DAY_FILTERS.map((day) => (
+                <option key={day.value} value={day.value} className="text-black">
+                  {day.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -210,15 +256,27 @@ const AdminDashboard = () => {
                         </button>
                       </>
                     ) : (
-                      <span
-                        className={`px-4 py-2 rounded-lg font-medium ${
-                          availability.status === 'confirmed'
-                            ? 'bg-green-400/15 text-green-200 border border-green-400/20'
-                            : 'bg-red-400/15 text-red-200 border border-red-400/20'
-                        }`}
-                      >
-                        {availability.status === 'confirmed' ? 'Confermata' : 'Rifiutata'}
-                      </span>
+                      <div className="flex gap-2 items-center">
+                        <span
+                          className={`px-4 py-2 rounded-lg font-medium ${
+                            availability.status === 'confirmed'
+                              ? 'bg-green-400/15 text-green-200 border border-green-400/20'
+                              : 'bg-red-400/15 text-red-200 border border-red-400/20'
+                          }`}
+                        >
+                          {availability.status === 'confirmed' ? 'Confermata' : 'Rifiutata'}
+                        </span>
+
+                        {availability.status === 'confirmed' && (
+                          <button
+                            onClick={() => handleDeleteAvailability(availability._id)}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Elimina turno
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

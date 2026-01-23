@@ -3,7 +3,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useChat } from '../contexts/ChatContext';
 import { useEffect, useState } from 'react';
-import ParallaxBackground from './ParallaxBackground';
 import cityBg from '../assets/backgrounds/city-dashboard.jpg';
 import {
   Home,
@@ -76,8 +75,16 @@ const Layout = () => {
   }
 
   return (
-    <ParallaxBackground image={cityBg} variant="dark">
-      <div className="layout-dark min-h-screen">
+    <div
+      className="min-h-screen text-white"
+      style={{
+        backgroundImage:
+          `linear-gradient(180deg, rgba(6,6,18,0.86) 0%, rgba(10,10,24,0.9) 50%, rgba(6,6,18,0.92) 100%), url(${cityBg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
+      }}
+    >
+      <div className="min-h-screen bg-black/55 backdrop-blur-[2px]">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-black/25 backdrop-blur-md">
         <div className={isDashboardFullBleed ? 'w-full px-4 sm:px-6 lg:px-10' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'}>
@@ -243,7 +250,7 @@ const Layout = () => {
         <Outlet />
       </main>
       </div>
-    </ParallaxBackground>
+    </div>
   );
 };
 
