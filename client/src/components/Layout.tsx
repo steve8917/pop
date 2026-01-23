@@ -76,7 +76,7 @@ const Layout = () => {
 
   return (
     <div
-      className="min-h-screen text-white"
+      className="layout-dark min-h-screen text-white"
       style={{
         backgroundImage:
           `linear-gradient(180deg, rgba(6,6,18,0.86) 0%, rgba(10,10,24,0.9) 50%, rgba(6,6,18,0.92) 100%), url(${cityBg})`,

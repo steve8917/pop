@@ -138,7 +138,7 @@ const AdminDashboard = () => {
 
       {/* Filters */}
       <div className="card">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setStatusFilter('pending')}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
@@ -169,12 +169,12 @@ const AdminDashboard = () => {
           >
             Tutte
           </button>
-          <div className="ml-auto">
-            <label className="text-white/80 text-sm mr-2">Giorno</label>
+          <div className="ml-auto flex items-center gap-2 w-full md:w-auto">
+            <label className="text-white/80 text-sm">Giorno</label>
             <select
               value={dayFilter}
               onChange={(e) => setDayFilter(e.target.value as typeof dayFilter)}
-              className="bg-white/10 text-white px-3 py-2 rounded-lg border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="bg-white/10 text-white px-3 py-2 rounded-lg border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500 w-full md:w-auto"
             >
               {DAY_FILTERS.map((day) => (
                 <option key={day.value} value={day.value} className="text-black">
