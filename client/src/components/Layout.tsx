@@ -174,6 +174,16 @@ const Layout = () => {
                 )}
               </div>
 
+              {/* Quick Logout (always visible) */}
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-lg hover:bg-white/10 text-white/90 transition-colors"
+                title="Logout"
+                aria-label="Logout"
+              >
+                <LogOut size={20} />
+              </button>
+
               {/* User Menu */}
               <div className="hidden md:flex items-center space-x-3 pl-4 border-l border-white/10">
                 <div className="text-right">
