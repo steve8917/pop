@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import User from '../models/User';
 import ChatRoom from '../models/ChatRoom';
+import Availability from '../models/Availability';
+import Schedule from '../models/Schedule';
+import Notification from '../models/Notification';
 import { AuthRequest } from '../types';
 import { generateToken, generatePasswordResetToken } from '../utils/jwt';
 import { sendWelcomeEmail, sendPasswordResetEmail, sendVerificationEmail } from '../utils/email';
@@ -354,6 +357,87 @@ export const resendVerificationEmail = async (req: Request, res: Response): Prom
     });
   } catch (error: any) {
     console.error('Errore reinvio email verifica:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getAllUsers = async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const users = await User.find()
+      .select('firstName lastName email gender role isActive emailVerified createdAt')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      users
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteUser = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      res.status(400).json({ message: 'ID utente richiesto' });
+      return;
+    }
+
+    if (req.user?.userId === id) {
+      res.status(400).json({ message: 'Non puoi eliminare il tuo account' });
+      return;
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: 'Utente non trovato' });
+      return;
+    }
+
+    // Rimuovi disponibilità dell'utente
+    await Availability.deleteMany({ user: user._id });
+
+    // Rimuovi notifiche dell'utente
+    await Notification.deleteMany({ user: user._id });
+
+    // Rimuovi l'utente dai turni assegnati
+    const schedules = await Schedule.find({ 'assignedUsers.user': user._id });
+    for (const schedule of schedules) {
+      schedule.assignedUsers = schedule.assignedUsers.filter(
+        (assignment: any) => assignment.user.toString() !== user._id.toString()
+      );
+
+      if (schedule.assignedUsers.length === 0) {
+        await Schedule.findByIdAndDelete(schedule._id);
+      } else {
+        const males = schedule.assignedUsers.filter((u: any) => u.gender === 'male').length;
+        const females = schedule.assignedUsers.filter((u: any) => u.gender === 'female').length;
+        schedule.isConfirmed = males >= 1 && females >= 1 && females <= 2;
+        await schedule.save();
+      }
+    }
+
+    // Rimuovi l'utente dalle chat room e i suoi messaggi
+    const chatRooms = await ChatRoom.find({ participants: user._id });
+    for (const chatRoom of chatRooms) {
+      chatRoom.participants = chatRoom.participants.filter(
+        (participant) => participant.toString() !== user._id.toString()
+      );
+      chatRoom.messages = chatRoom.messages.filter(
+        (msg: any) => msg.user.toString() !== user._id.toString()
+      );
+      await chatRoom.save();
+    }
+
+    await User.findByIdAndDelete(user._id);
+
+    res.json({
+      success: true,
+      message: 'Utente eliminato con successo'
+    });
+  } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
 };

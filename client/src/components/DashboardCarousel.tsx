@@ -8,6 +8,7 @@ export type DashboardCarouselSlide = {
   imageAlt: string;
   text: string;
   attribution?: string;
+  objectPosition?: string;
 };
 
 type DashboardCarouselProps = {
@@ -81,6 +82,7 @@ const DashboardCarousel = ({ slides, autoPlayMs = 6500 }: DashboardCarouselProps
               src={active.imageSrc}
               alt={active.imageAlt}
               className="h-full w-full object-cover"
+              style={{ objectPosition: active.objectPosition || 'center' }}
               initial={{ opacity: 0, scale: 1.02 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.01 }}

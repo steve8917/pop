@@ -5,6 +5,7 @@ export const dashboardCarouselSlides: DashboardCarouselSlide[] = [
     id: 'slide-1',
     imageSrc: '/dashboard-carousel/slide-1.jpg',
     imageAlt: 'Immagine carosello 1',
+    objectPosition: 'center top',
     text: 'Espositori mobili per rendere “testimonianza a tutte le nazioni”',
     attribution: 'Fonte (opzionale)'
   },
