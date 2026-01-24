@@ -2,11 +2,14 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import path from 'path';
 import { connectDatabase } from './config/database';
 import { errorHandler } from './middleware/errorHandler';
+import { verifyToken } from './utils/jwt';
 import authRoutes from './routes/authRoutes';
 import availabilityRoutes from './routes/availabilityRoutes';
 import scheduleRoutes from './routes/scheduleRoutes';
@@ -22,6 +25,7 @@ import Schedule from './models/Schedule';
 dotenv.config();
 
 const app = express();
+app.disable('x-powered-by');
 
 // Se siamo dietro un reverse proxy (es. Nginx) in produzione
 if (process.env.NODE_ENV === 'production') {
@@ -37,6 +41,12 @@ const io = new Server(httpServer, {
 });
 
 // Middleware
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false
+  })
+);
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
@@ -44,6 +54,26 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Troppi tentativi, riprova più tardi'
+});
+
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth/forgot-password', loginLimiter);
+app.use('/api/auth/reset-password', loginLimiter);
+app.use('/api/auth/resend-verification', authLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -76,6 +106,37 @@ if (process.env.NODE_ENV === 'production') {
 // Error handler
 app.use(errorHandler);
 
+const parseCookies = (cookieHeader?: string): Record<string, string> => {
+  if (!cookieHeader) return {};
+  return cookieHeader.split(';').reduce((acc, part) => {
+    const [rawKey, ...rest] = part.trim().split('=');
+    if (!rawKey) return acc;
+    acc[rawKey] = decodeURIComponent(rest.join('=') || '');
+    return acc;
+  }, {} as Record<string, string>);
+};
+
+io.use((socket, next) => {
+  try {
+    const cookieHeader = socket.request.headers.cookie;
+    const cookies = parseCookies(cookieHeader);
+    const authToken =
+      (socket.handshake.auth?.token as string | undefined) ||
+      (socket.handshake.headers?.authorization as string | undefined)?.replace('Bearer ', '') ||
+      cookies.token;
+
+    if (!authToken) {
+      return next(new Error('Autenticazione richiesta'));
+    }
+
+    const decoded = verifyToken(authToken);
+    socket.data.user = decoded;
+    return next();
+  } catch (error) {
+    return next(new Error('Token non valido'));
+  }
+});
+
 // Socket.IO per notifiche in tempo reale e chat
 const connectedUsers = new Map<string, string>();
 const chatUsers = new Set<string>();
@@ -85,14 +146,24 @@ io.on('connection', (socket) => {
 
   // Autenticazione per notifiche
   socket.on('authenticate', (userId: string) => {
-    connectedUsers.set(userId, socket.id);
-    console.log(`User ${userId} authenticated with socket ${socket.id}`);
+    const authUserId = socket.data.user?.userId;
+    if (!authUserId || authUserId !== userId) {
+      console.warn('Socket authenticate mismatch');
+      return;
+    }
+    connectedUsers.set(authUserId, socket.id);
+    console.log(`User ${authUserId} authenticated with socket ${socket.id}`);
   });
 
   // Join chat
   socket.on('join-chat', async (userId: string) => {
+    const authUserId = socket.data.user?.userId;
+    if (!authUserId || authUserId !== userId) {
+      console.warn('Socket join-chat unauthorized');
+      return;
+    }
     chatUsers.add(socket.id);
-    connectedUsers.set(userId, socket.id);
+    connectedUsers.set(authUserId, socket.id);
 
     // Invia conteggio utenti online
     io.emit('online-users', chatUsers.size);
@@ -113,8 +184,13 @@ io.on('connection', (socket) => {
   // Invia messaggio chat globale
   socket.on('send-message', async (data: { message: string; userId: string; userInfo: any }) => {
     try {
+      const authUserId = socket.data.user?.userId;
+      if (!authUserId || authUserId !== data.userId) {
+        console.warn('Socket send-message unauthorized');
+        return;
+      }
       const newMessage = await Message.create({
-        user: data.userId,
+        user: authUserId,
         message: data.message
       });
 
@@ -131,9 +207,14 @@ io.on('connection', (socket) => {
   // JOIN TURNO CHAT ROOM
   socket.on('join-schedule-chat', async (data: { scheduleId: string; userId: string }) => {
     try {
+      const authUserId = socket.data.user?.userId;
+      if (!authUserId || authUserId !== data.userId) {
+        console.warn('Socket join-schedule-chat unauthorized');
+        return;
+      }
       const roomId = `schedule-${data.scheduleId}`;
       socket.join(roomId);
-      console.log(`User ${data.userId} joined room ${roomId}`);
+      console.log(`User ${authUserId} joined room ${roomId}`);
 
       // Carica o crea la chat room
       let chatRoom = await ChatRoom.findOne({ schedule: data.scheduleId })
@@ -159,7 +240,7 @@ io.on('connection', (socket) => {
 
       // Notifica partecipanti che qualcuno è entrato
       socket.to(roomId).emit('user-joined-schedule-chat', {
-        userId: data.userId
+        userId: authUserId
       });
     } catch (error) {
       console.error('Errore join schedule chat:', error);
@@ -168,13 +249,18 @@ io.on('connection', (socket) => {
 
   // LEAVE TURNO CHAT ROOM
   socket.on('leave-schedule-chat', (data: { scheduleId: string; userId: string }) => {
+    const authUserId = socket.data.user?.userId;
+    if (!authUserId || authUserId !== data.userId) {
+      console.warn('Socket leave-schedule-chat unauthorized');
+      return;
+    }
     const roomId = `schedule-${data.scheduleId}`;
     socket.leave(roomId);
-    console.log(`User ${data.userId} left room ${roomId}`);
+    console.log(`User ${authUserId} left room ${roomId}`);
 
     // Notifica partecipanti che qualcuno è uscito
     socket.to(roomId).emit('user-left-schedule-chat', {
-      userId: data.userId
+      userId: authUserId
     });
   });
 
@@ -186,6 +272,11 @@ io.on('connection', (socket) => {
     userInfo: any;
   }) => {
     try {
+      const authUserId = socket.data.user?.userId;
+      if (!authUserId || authUserId !== data.userId) {
+        console.warn('Socket send-schedule-message unauthorized');
+        return;
+      }
       const roomId = `schedule-${data.scheduleId}`;
 
       // Carica o crea la chat room
@@ -207,7 +298,7 @@ io.on('connection', (socket) => {
 
       if (chatRoom) {
         chatRoom.messages.push({
-          user: data.userId as any,
+          user: authUserId as any,
           message: data.message,
           timestamp: new Date()
         });
@@ -230,16 +321,16 @@ io.on('connection', (socket) => {
           console.log('📢 Sending notifications to participants:', chatRoom.participants.length);
           for (const participantId of chatRoom.participants) {
             const participantIdStr = participantId.toString();
-            console.log(`Checking participant: ${participantIdStr}, sender: ${data.userId}`);
+            console.log(`Checking participant: ${participantIdStr}, sender: ${authUserId}`);
             // Invia notifica solo se non è il mittente
-            if (participantIdStr !== data.userId) {
+            if (participantIdStr !== authUserId) {
               const socketId = connectedUsers.get(participantIdStr);
               console.log(`Participant ${participantIdStr} socket: ${socketId}`);
               if (socketId) {
                 console.log(`✅ Sending notification to ${participantIdStr} via socket ${socketId}`);
                 io.to(socketId).emit('schedule-message-notification', {
                   scheduleId: data.scheduleId,
-                  senderId: data.userId
+                  senderId: authUserId
                 });
               } else {
                 console.log(`⚠️ Participant ${participantIdStr} not connected`);
