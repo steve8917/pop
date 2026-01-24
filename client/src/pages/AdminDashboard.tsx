@@ -184,7 +184,7 @@ const AdminDashboard = () => {
 
       const rows = schedules.map((schedule) => {
         const dateLabel = formatScheduleDate(schedule.date);
-        const location = `${schedule.shift.location}\n${schedule.shift.startTime}-${schedule.shift.endTime}`;
+        const location = `${schedule.shift.location}\n${schedule.shift.startTime}–${schedule.shift.endTime}`;
         const names = getAssignedNames(schedule);
         return [dateLabel, location, names.join('\n') || ''];
       });
@@ -198,7 +198,7 @@ const AdminDashboard = () => {
           font: 'helvetica',
           fontSize: 10,
           textColor: [35, 35, 35],
-          cellPadding: { top: 6, right: 6, bottom: 6, left: 6 },
+          cellPadding: { top: 5, right: 6, bottom: 5, left: 6 },
           valign: 'middle',
           lineColor: [180, 180, 180],
           lineWidth: 0.6
@@ -215,9 +215,9 @@ const AdminDashboard = () => {
           fillColor: [255, 255, 255]
         },
         columnStyles: {
-          0: { cellWidth: 130 },
+          0: { cellWidth: 135 },
           1: { cellWidth: 220 },
-          2: { cellWidth: 185 }
+          2: { cellWidth: 180 }
         },
         margin: { left: 20, right: 20, top: 96, bottom: 20 },
         didParseCell: (data) => {
@@ -229,11 +229,28 @@ const AdminDashboard = () => {
             if (data.column.index === 1) {
               data.cell.styles.halign = 'center';
               data.cell.styles.fontStyle = 'normal';
+              data.cell.text = [''];
             }
             if (data.column.index === 2) {
-              data.cell.styles.halign = 'left';
+              data.cell.styles.halign = 'right';
               data.cell.styles.fontStyle = 'normal';
             }
+          }
+        },
+        didDrawCell: (data) => {
+          if (data.section === 'body' && data.column.index === 1) {
+            const rawText = Array.isArray(data.cell.raw) ? data.cell.raw.join('\n') : String(data.cell.raw ?? '');
+            const [line1, line2] = rawText.split('\n');
+            const fontSize = data.cell.styles.fontSize || 10;
+            const lineHeight = fontSize * 1.15;
+            const textX = data.cell.x + data.cell.width / 2;
+            const startY = data.cell.y + (data.cell.height - lineHeight * 2) / 2 + fontSize;
+            doc.setTextColor(35, 35, 35);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(fontSize);
+            doc.text(line1 || '', textX, startY, { align: 'center' });
+            doc.setFont('helvetica', 'normal');
+            doc.text(line2 || '', textX, startY + lineHeight, { align: 'center' });
           }
         },
         didDrawPage: () => {
