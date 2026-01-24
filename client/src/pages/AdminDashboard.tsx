@@ -297,10 +297,18 @@ const AdminDashboard = () => {
       }
 
       const lastTable = (doc as unknown as { lastAutoTable?: { startY: number; finalY: number } }).lastAutoTable;
-      if (lastTable) {
-        doc.setDrawColor(...borderColor);
-        doc.setLineWidth(0.9);
-        doc.rect(marginX, lastTable.startY, tableWidth, lastTable.finalY - lastTable.startY, 'S');
+      if (
+        lastTable &&
+        Number.isFinite(lastTable.startY) &&
+        Number.isFinite(lastTable.finalY) &&
+        Number.isFinite(tableWidth)
+      ) {
+        const height = lastTable.finalY - lastTable.startY;
+        if (height > 0) {
+          doc.setDrawColor(...borderColor);
+          doc.setLineWidth(0.9);
+          doc.rect(marginX, lastTable.startY, tableWidth, height, 'S');
+        }
       }
 
       if (!tableRendered) {
