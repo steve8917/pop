@@ -174,12 +174,13 @@ const AdminDashboard = () => {
       const pageWidth = doc.internal.pageSize.getWidth();
 
       doc.setFillColor(128, 0, 0);
-      doc.rect(0, 0, pageWidth, 70, 'F');
+      doc.rect(0, 0, pageWidth, 72, 'F');
       doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'italic');
       doc.setFontSize(18);
-      doc.text('Testimonianza Pubblica - FIRENZE STATUTO', pageWidth / 2, 28, { align: 'center' });
+      doc.text('Testimonianza Pubblica - FIRENZE STATUTO', pageWidth / 2, 30, { align: 'center' });
       doc.setFontSize(14);
-      doc.text(`${IT_MONTHS[pdfMonth - 1]} ${pdfYear}`, pageWidth / 2, 50, { align: 'center' });
+      doc.text(`${IT_MONTHS[pdfMonth - 1]} ${pdfYear}`, pageWidth / 2, 52, { align: 'center' });
 
       const rows = schedules.map((schedule) => {
         const dateLabel = formatScheduleDate(schedule.date);
@@ -189,26 +190,52 @@ const AdminDashboard = () => {
       });
 
       autoTable(doc, {
-        startY: 90,
+        startY: 92,
         head: [['DATA', 'LUOGO', 'PROCLAMATORI']],
         body: rows,
+        theme: 'grid',
         styles: {
+          font: 'helvetica',
           fontSize: 10,
-          textColor: [40, 40, 40],
-          cellPadding: 6,
-          valign: 'middle'
+          textColor: [35, 35, 35],
+          cellPadding: { top: 6, right: 6, bottom: 6, left: 6 },
+          valign: 'middle',
+          halign: 'center',
+          lineColor: [170, 170, 170],
+          lineWidth: 0.5
         },
         headStyles: {
-          fillColor: [60, 60, 60],
+          fillColor: [90, 90, 90],
           textColor: [255, 255, 255],
-          fontStyle: 'bold',
-          halign: 'center'
+          fontStyle: 'bolditalic',
+          halign: 'center',
+          lineColor: [140, 140, 140],
+          lineWidth: 0.7
+        },
+        bodyStyles: {
+          fillColor: [255, 255, 255]
         },
         columnStyles: {
-          0: { cellWidth: 130 },
-          1: { cellWidth: 160 },
-          2: { cellWidth: 240 }
-        }
+          0: { cellWidth: 120 },
+          1: { cellWidth: 190 },
+          2: { cellWidth: 210 }
+        },
+        margin: { left: 24, right: 24, top: 92, bottom: 24 },
+        didDrawPage: () => {
+          doc.setFillColor(128, 0, 0);
+          doc.rect(0, 0, pageWidth, 72, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(18);
+          doc.text('Testimonianza Pubblica - FIRENZE STATUTO', pageWidth / 2, 30, { align: 'center' });
+          doc.setFontSize(14);
+          doc.text(`${IT_MONTHS[pdfMonth - 1]} ${pdfYear}`, pageWidth / 2, 52, { align: 'center' });
+          doc.setDrawColor(120, 120, 120);
+          doc.setLineWidth(0.7);
+          doc.line(24, 92, pageWidth - 24, 92);
+        },
+        pageBreak: 'auto',
+        rowPageBreak: 'auto'
       });
 
       doc.save(`programma-${pdfMonth}-${pdfYear}.pdf`);
