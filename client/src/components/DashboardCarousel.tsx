@@ -90,13 +90,13 @@ const DashboardCarousel = ({ slides, autoPlayMs = 6500 }: DashboardCarouselProps
       </div>
 
       <div className="relative">
-        <div className="relative aspect-[16/10] lg:aspect-[21/9] bg-white/5">
+        <div className="relative aspect-[16/10] lg:aspect-[21/9] bg-black/15">
           <AnimatePresence mode="wait">
             <motion.img
               key={active.id}
               src={active.imageSrc}
               alt={active.imageAlt}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
               style={{ objectPosition: active.objectPosition || 'center' }}
               initial={{ opacity: 0, scale: 1.02 }}
               animate={{ opacity: 1, scale: 1 }}

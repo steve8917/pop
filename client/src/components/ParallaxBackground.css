@@ -4,7 +4,7 @@
   min-height: 100vh;
   background-size: cover;
   background-position: center;
-  background-attachment: fixed;
+  background-attachment: scroll;
   z-index: 0;
 }
 
@@ -28,8 +28,3 @@
     linear-gradient(180deg, rgba(6, 6, 18, 0.82) 0%, rgba(10, 10, 24, 0.86) 50%, rgba(6, 6, 18, 0.88) 100%);
 }
 
-@media (max-width: 768px) {
-  .parallax-bg {
-    background-attachment: scroll;
-  }
-}
