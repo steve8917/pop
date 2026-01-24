@@ -190,7 +190,7 @@ const AdminDashboard = () => {
       });
 
       autoTable(doc, {
-        startY: 92,
+        startY: 96,
         head: [['DATA', 'LUOGO', 'PROCLAMATORI']],
         body: rows,
         theme: 'grid',
@@ -200,27 +200,42 @@ const AdminDashboard = () => {
           textColor: [35, 35, 35],
           cellPadding: { top: 6, right: 6, bottom: 6, left: 6 },
           valign: 'middle',
-          halign: 'center',
-          lineColor: [170, 170, 170],
-          lineWidth: 0.5
+          lineColor: [180, 180, 180],
+          lineWidth: 0.6
         },
         headStyles: {
-          fillColor: [90, 90, 90],
+          fillColor: [95, 95, 95],
           textColor: [255, 255, 255],
           fontStyle: 'bolditalic',
           halign: 'center',
-          lineColor: [140, 140, 140],
-          lineWidth: 0.7
+          lineColor: [120, 120, 120],
+          lineWidth: 0.8
         },
         bodyStyles: {
           fillColor: [255, 255, 255]
         },
         columnStyles: {
-          0: { cellWidth: 120 },
-          1: { cellWidth: 190 },
-          2: { cellWidth: 210 }
+          0: { cellWidth: 130 },
+          1: { cellWidth: 220 },
+          2: { cellWidth: 185 }
         },
-        margin: { left: 24, right: 24, top: 92, bottom: 24 },
+        margin: { left: 20, right: 20, top: 96, bottom: 20 },
+        didParseCell: (data) => {
+          if (data.section === 'body') {
+            if (data.column.index === 0) {
+              data.cell.styles.halign = 'left';
+              data.cell.styles.fontStyle = 'normal';
+            }
+            if (data.column.index === 1) {
+              data.cell.styles.halign = 'center';
+              data.cell.styles.fontStyle = 'normal';
+            }
+            if (data.column.index === 2) {
+              data.cell.styles.halign = 'left';
+              data.cell.styles.fontStyle = 'normal';
+            }
+          }
+        },
         didDrawPage: () => {
           doc.setFillColor(128, 0, 0);
           doc.rect(0, 0, pageWidth, 72, 'F');
@@ -230,9 +245,9 @@ const AdminDashboard = () => {
           doc.text('Testimonianza Pubblica - FIRENZE STATUTO', pageWidth / 2, 30, { align: 'center' });
           doc.setFontSize(14);
           doc.text(`${IT_MONTHS[pdfMonth - 1]} ${pdfYear}`, pageWidth / 2, 52, { align: 'center' });
-          doc.setDrawColor(120, 120, 120);
-          doc.setLineWidth(0.7);
-          doc.line(24, 92, pageWidth - 24, 92);
+          doc.setDrawColor(140, 140, 140);
+          doc.setLineWidth(0.8);
+          doc.line(20, 96, pageWidth - 20, 96);
         },
         pageBreak: 'auto',
         rowPageBreak: 'auto'
