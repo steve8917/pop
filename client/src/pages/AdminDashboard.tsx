@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import api from '../utils/api';
-import { CheckCircle, XCircle, Clock, Trash2 } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Trash2, FileDown } from 'lucide-react';
 
 interface Availability {
   _id: string;
@@ -23,6 +25,27 @@ interface Availability {
   status: 'pending' | 'confirmed' | 'rejected';
 }
 
+interface ScheduleItem {
+  _id: string;
+  shift: {
+    day: string;
+    location: string;
+    startTime: string;
+    endTime: string;
+  };
+  date: string;
+  assignedUsers: {
+    user: {
+      _id?: string;
+      firstName: string;
+      lastName: string;
+      gender: string;
+    } | string;
+    gender: string;
+  }[];
+  isConfirmed: boolean;
+}
+
 
 const DAY_NAMES: { [key: string]: string } = {
   monday: 'Lunedì',
@@ -31,6 +54,21 @@ const DAY_NAMES: { [key: string]: string } = {
   saturday: 'Sabato',
   sunday: 'Domenica'
 };
+
+const IT_MONTHS = [
+  'Gennaio',
+  'Febbraio',
+  'Marzo',
+  'Aprile',
+  'Maggio',
+  'Giugno',
+  'Luglio',
+  'Agosto',
+  'Settembre',
+  'Ottobre',
+  'Novembre',
+  'Dicembre'
+];
 
 const DAY_FILTERS: { value: 'all' | 'monday' | 'thursday' | 'friday' | 'saturday' | 'sunday'; label: string }[] = [
   { value: 'all', label: 'Tutti i giorni' },
@@ -46,6 +84,9 @@ const AdminDashboard = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed'>('pending');
   const [dayFilter, setDayFilter] = useState<'all' | 'monday' | 'thursday' | 'friday' | 'saturday' | 'sunday'>('all');
   const [isLoading, setIsLoading] = useState(false);
+  const [pdfMonth, setPdfMonth] = useState(new Date().getMonth() + 1);
+  const [pdfYear, setPdfYear] = useState(new Date().getFullYear());
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
   useEffect(() => {
     fetchAvailabilities();
@@ -94,6 +135,88 @@ const AdminDashboard = () => {
       fetchAvailabilities();
     } catch (error) {
       toast.error('Errore durante l\'eliminazione');
+    }
+  };
+
+  const formatScheduleDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const dayName = date.toLocaleDateString('it-IT', { weekday: 'long' });
+    const monthName = date.toLocaleDateString('it-IT', { month: 'long' });
+    return `${dayName} ${date.getDate()} ${monthName}`.toLowerCase();
+  };
+
+  const getAssignedNames = (schedule: ScheduleItem) => {
+    return schedule.assignedUsers
+      .map((assignment) => {
+        if (typeof assignment.user === 'string' || !assignment.user) {
+          return 'Utente';
+        }
+        return `${assignment.user.firstName} ${assignment.user.lastName}`.trim();
+      })
+      .filter(Boolean);
+  };
+
+  const handleExportPdf = async () => {
+    setIsPdfGenerating(true);
+    try {
+      const { data } = await api.get('/schedule/monthly', {
+        params: { month: pdfMonth, year: pdfYear }
+      });
+
+      const schedules: ScheduleItem[] = (data.schedules || []).slice();
+      schedules.sort((a, b) => {
+        const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        return a.shift.startTime.localeCompare(b.shift.startTime);
+      });
+
+      const doc = new jsPDF('p', 'pt', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      doc.setFillColor(128, 0, 0);
+      doc.rect(0, 0, pageWidth, 70, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.text('Testimonianza Pubblica - FIRENZE STATUTO', pageWidth / 2, 28, { align: 'center' });
+      doc.setFontSize(14);
+      doc.text(`${IT_MONTHS[pdfMonth - 1]} ${pdfYear}`, pageWidth / 2, 50, { align: 'center' });
+
+      const rows = schedules.map((schedule) => {
+        const dateLabel = formatScheduleDate(schedule.date);
+        const location = `${schedule.shift.location}\n${schedule.shift.startTime}-${schedule.shift.endTime}`;
+        const names = getAssignedNames(schedule);
+        return [dateLabel, location, names.join('\n') || ''];
+      });
+
+      autoTable(doc, {
+        startY: 90,
+        head: [['DATA', 'LUOGO', 'PROCLAMATORI']],
+        body: rows,
+        styles: {
+          fontSize: 10,
+          textColor: [40, 40, 40],
+          cellPadding: 6,
+          valign: 'middle'
+        },
+        headStyles: {
+          fillColor: [60, 60, 60],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        columnStyles: {
+          0: { cellWidth: 130 },
+          1: { cellWidth: 160 },
+          2: { cellWidth: 240 }
+        }
+      });
+
+      doc.save(`programma-${pdfMonth}-${pdfYear}.pdf`);
+      toast.success('PDF generato');
+    } catch (error) {
+      toast.error('Errore durante la generazione del PDF');
+    } finally {
+      setIsPdfGenerating(false);
     }
   };
 
@@ -290,6 +413,47 @@ const AdminDashboard = () => {
                             Elimina turno
                           </button>
                         )}
+
+                        {/* PDF Export */}
+                        <div className="card space-y-4">
+                          <div>
+                            <h2 className="text-lg font-semibold text-white">Esporta programma mensile</h2>
+                            <p className="text-sm text-white/60">
+                              Genera il PDF anche se il programma è parziale.
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <select
+                              value={pdfMonth}
+                              onChange={(e) => setPdfMonth(parseInt(e.target.value))}
+                              className="input-field max-w-[180px]"
+                            >
+                              {Array.from({ length: 12 }, (_, i) => (
+                                <option key={i + 1} value={i + 1}>
+                                  {IT_MONTHS[i]}
+                                </option>
+                              ))}
+                            </select>
+                            <select
+                              value={pdfYear}
+                              onChange={(e) => setPdfYear(parseInt(e.target.value))}
+                              className="input-field max-w-[140px]"
+                            >
+                              <option value={2024}>2024</option>
+                              <option value={2025}>2025</option>
+                              <option value={2026}>2026</option>
+                              <option value={2027}>2027</option>
+                            </select>
+                            <button
+                              onClick={handleExportPdf}
+                              disabled={isPdfGenerating}
+                              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-60"
+                            >
+                              <FileDown className="w-4 h-4" />
+                              {isPdfGenerating ? 'Generazione in corso...' : 'Genera PDF'}
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

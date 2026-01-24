@@ -7,7 +7,7 @@ export const dashboardCarouselSlides: DashboardCarouselSlide[] = [
     imageAlt: 'Immagine carosello 1',
     objectPosition: 'center top',
     text: 'Espositori mobili per rendere “testimonianza a tutte le nazioni”',
-    attribution: 'Fonte (opzionale)'
+    attribution: '<a href="https://www.jw.org/it/biblioteca-digitale/articoli/come-vengono-usate-donazioni/Espositori-mobili-per-rendere-testimonianza-a-tutte-le-nazioni/"> www.jw.org</a>'
   },
   {
     id: 'slide-2',
