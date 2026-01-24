@@ -249,6 +249,17 @@ const Layout = () => {
       <main className={isDashboardFullBleed ? 'w-full p-0' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}>
         <Outlet />
       </main>
+
+      <footer className="mt-8 border-t border-white/10 bg-black/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-3 text-white/70">
+          <div className="text-sm">
+            TepuApp · Sistema di gestione turni testimonianza pubblica
+          </div>
+          <div className="text-xs">
+            © {new Date().getFullYear()} TepuApp. Tutti i diritti riservati.
+          </div>
+        </div>
+      </footer>
       </div>
     </div>
   );

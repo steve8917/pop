@@ -14,6 +14,7 @@ import Availability from './pages/Availability';
 import Schedule from './pages/Schedule';
 import ScheduleChat from './pages/ScheduleChat';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminUsers from './pages/AdminUsers';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
@@ -47,6 +48,7 @@ function AppRoutes() {
 
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
           </Route>
         </Route>
       </Route>
