@@ -16,6 +16,17 @@ type DashboardCarouselProps = {
   autoPlayMs?: number;
 };
 
+const getAttribution = (value?: string) => {
+  if (!value) return { text: 'Fonte (opzionale)' };
+  const hrefMatch = value.match(/href=["']([^"']+)["']/i);
+  const textMatch = value.replace(/<[^>]*>/g, '').trim();
+  const text = textMatch || value;
+  if (hrefMatch && hrefMatch[1]) {
+    return { text, href: hrefMatch[1] };
+  }
+  return { text };
+};
+
 const clampIndex = (index: number, length: number) => {
   if (length <= 0) return 0;
   return ((index % length) + length) % length;
@@ -59,6 +70,7 @@ const DashboardCarousel = ({ slides, autoPlayMs = 6500 }: DashboardCarouselProps
   if (length === 0) return null;
 
   const active = safeSlides[activeIndex];
+  const attribution = getAttribution(active.attribution);
 
   return (
     <div
@@ -154,9 +166,18 @@ const DashboardCarousel = ({ slides, autoPlayMs = 6500 }: DashboardCarouselProps
               </AnimatePresence>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
-                <div className="text-xs text-white/60">
-                  {active.attribution || 'Fonte (opzionale)'}
-                </div>
+                {attribution.href ? (
+                  <a
+                    href={attribution.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-purple-200 hover:text-purple-100 underline underline-offset-2"
+                  >
+                    {attribution.text}
+                  </a>
+                ) : (
+                  <div className="text-xs text-white/60">{attribution.text}</div>
+                )}
                 <div className="hidden sm:block text-white/35">•</div>
                 <div className="text-xs text-white/55">Autoplay {isPaused ? 'in pausa' : 'attivo'}</div>
               </div>

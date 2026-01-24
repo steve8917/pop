@@ -172,15 +172,31 @@ const AdminDashboard = () => {
 
       const doc = new jsPDF('p', 'pt', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const marginX = 28;
+      const headerHeight = 84;
+      const tableTop = headerHeight + 22;
+      const title = 'Testimonianza Pubblica - Firenze Statuto';
+      const subtitle = `${IT_MONTHS[pdfMonth - 1]} ${pdfYear}`;
+      const generatedAt = new Date().toLocaleDateString('it-IT');
 
-      doc.setFillColor(128, 0, 0);
-      doc.rect(0, 0, pageWidth, 72, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(18);
-      doc.text('Testimonianza Pubblica - FIRENZE STATUTO', pageWidth / 2, 30, { align: 'center' });
-      doc.setFontSize(14);
-      doc.text(`${IT_MONTHS[pdfMonth - 1]} ${pdfYear}`, pageWidth / 2, 52, { align: 'center' });
+      const drawHeader = () => {
+        doc.setFillColor(38, 38, 46);
+        doc.rect(0, 0, pageWidth, headerHeight, 'F');
+        doc.setFillColor(125, 64, 204);
+        doc.rect(0, headerHeight - 6, pageWidth, 6, 'F');
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text(title, pageWidth / 2, 34, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(12);
+        doc.text(subtitle, pageWidth / 2, 54, { align: 'center' });
+        doc.setTextColor(210, 210, 210);
+        doc.setFontSize(9);
+        doc.text(`Generato il ${generatedAt}`, pageWidth - marginX, 70, { align: 'right' });
+      };
 
       const rows = schedules.map((schedule) => {
         const dateLabel = formatScheduleDate(schedule.date);
@@ -190,41 +206,45 @@ const AdminDashboard = () => {
       });
 
       autoTable(doc, {
-        startY: 96,
-        head: [['DATA', 'LUOGO', 'PROCLAMATORI']],
+        startY: tableTop,
+        head: [['DATA', 'LUOGO E ORARIO', 'PROCLAMATORI']],
         body: rows,
-        theme: 'grid',
+        theme: 'striped',
         styles: {
           font: 'helvetica',
-          fontSize: 10,
-          textColor: [35, 35, 35],
-          cellPadding: { top: 5, right: 6, bottom: 5, left: 6 },
+          fontSize: 10.5,
+          textColor: [38, 38, 46],
+          cellPadding: { top: 6, right: 8, bottom: 6, left: 8 },
           valign: 'middle',
-          lineColor: [180, 180, 180],
-          lineWidth: 0.6
+          lineColor: [210, 210, 220],
+          lineWidth: 0.5
         },
         headStyles: {
-          fillColor: [95, 95, 95],
+          fillColor: [58, 58, 70],
           textColor: [255, 255, 255],
-          fontStyle: 'bolditalic',
+          fontStyle: 'bold',
           halign: 'center',
-          lineColor: [120, 120, 120],
-          lineWidth: 0.8
+          lineColor: [58, 58, 70],
+          lineWidth: 0.8,
+          minCellHeight: 26
         },
         bodyStyles: {
           fillColor: [255, 255, 255]
         },
-        columnStyles: {
-          0: { cellWidth: 135 },
-          1: { cellWidth: 220 },
-          2: { cellWidth: 180 }
+        alternateRowStyles: {
+          fillColor: [246, 246, 250]
         },
-        margin: { left: 20, right: 20, top: 96, bottom: 20 },
+        columnStyles: {
+          0: { cellWidth: 150 },
+          1: { cellWidth: 240 },
+          2: { cellWidth: 150 }
+        },
+        margin: { left: marginX, right: marginX, top: tableTop, bottom: 36 },
         didParseCell: (data) => {
           if (data.section === 'body') {
             if (data.column.index === 0) {
               data.cell.styles.halign = 'left';
-              data.cell.styles.fontStyle = 'normal';
+              data.cell.styles.fontStyle = 'bold';
             }
             if (data.column.index === 1) {
               data.cell.styles.halign = 'center';
@@ -241,11 +261,11 @@ const AdminDashboard = () => {
           if (data.section === 'body' && data.column.index === 1) {
             const rawText = Array.isArray(data.cell.raw) ? data.cell.raw.join('\n') : String(data.cell.raw ?? '');
             const [line1, line2] = rawText.split('\n');
-            const fontSize = data.cell.styles.fontSize || 10;
-            const lineHeight = fontSize * 1.15;
+            const fontSize = data.cell.styles.fontSize || 10.5;
+            const lineHeight = fontSize * 1.2;
             const textX = data.cell.x + data.cell.width / 2;
             const startY = data.cell.y + (data.cell.height - lineHeight * 2) / 2 + fontSize;
-            doc.setTextColor(35, 35, 35);
+            doc.setTextColor(38, 38, 46);
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(fontSize);
             doc.text(line1 || '', textX, startY, { align: 'center' });
@@ -254,17 +274,12 @@ const AdminDashboard = () => {
           }
         },
         didDrawPage: () => {
-          doc.setFillColor(128, 0, 0);
-          doc.rect(0, 0, pageWidth, 72, 'F');
-          doc.setTextColor(255, 255, 255);
-          doc.setFont('helvetica', 'italic');
-          doc.setFontSize(18);
-          doc.text('Testimonianza Pubblica - FIRENZE STATUTO', pageWidth / 2, 30, { align: 'center' });
-          doc.setFontSize(14);
-          doc.text(`${IT_MONTHS[pdfMonth - 1]} ${pdfYear}`, pageWidth / 2, 52, { align: 'center' });
-          doc.setDrawColor(140, 140, 140);
-          doc.setLineWidth(0.8);
-          doc.line(20, 96, pageWidth - 20, 96);
+          drawHeader();
+          const pageNumber = doc.getNumberOfPages();
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(150, 150, 160);
+          doc.text(`Pagina ${pageNumber}`, pageWidth - marginX, pageHeight - 16, { align: 'right' });
         },
         pageBreak: 'auto',
         rowPageBreak: 'auto'
@@ -433,59 +448,61 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-3 w-full">
                     {availability.status === 'pending' ? (
-                      <>
+                      <div className="flex flex-col sm:flex-row gap-2 w-full">
                         <button
                           onClick={() => handleUpdateStatus(availability._id, 'confirmed')}
-                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
                         >
                           <CheckCircle className="w-4 h-4" />
                           Conferma
                         </button>
                         <button
                           onClick={() => handleUpdateStatus(availability._id, 'rejected')}
-                          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors w-full sm:w-auto"
                         >
                           <XCircle className="w-4 h-4" />
                           Rifiuta
                         </button>
-                      </>
+                      </div>
                     ) : (
-                      <div className="flex gap-2 items-center">
-                        <span
-                          className={`px-4 py-2 rounded-lg font-medium ${
-                            availability.status === 'confirmed'
-                              ? 'bg-green-400/15 text-green-200 border border-green-400/20'
-                              : 'bg-red-400/15 text-red-200 border border-red-400/20'
-                          }`}
-                        >
-                          {availability.status === 'confirmed' ? 'Confermata' : 'Rifiutata'}
-                        </span>
-
-                        {availability.status === 'confirmed' && (
-                          <button
-                            onClick={() => handleDeleteAvailability(availability._id)}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                      <div className="flex flex-col gap-3 w-full">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                          <span
+                            className={`px-4 py-2 rounded-lg font-medium w-full sm:w-auto text-center ${
+                              availability.status === 'confirmed'
+                                ? 'bg-green-400/15 text-green-200 border border-green-400/20'
+                                : 'bg-red-400/15 text-red-200 border border-red-400/20'
+                            }`}
                           >
-                            <Trash2 className="w-4 h-4" />
-                            Elimina turno
-                          </button>
-                        )}
+                            {availability.status === 'confirmed' ? 'Confermata' : 'Rifiutata'}
+                          </span>
+
+                          {availability.status === 'confirmed' && (
+                            <button
+                              onClick={() => handleDeleteAvailability(availability._id)}
+                              className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors w-full sm:w-auto"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Elimina turno
+                            </button>
+                          )}
+                        </div>
 
                         {/* PDF Export */}
-                        <div className="card space-y-4">
+                        <div className="card space-y-3 sm:space-y-4 w-full p-4 sm:p-6">
                           <div>
-                            <h2 className="text-lg font-semibold text-white">Esporta programma mensile</h2>
-                            <p className="text-sm text-white/60">
+                            <h2 className="text-base sm:text-lg font-semibold text-white">Esporta programma mensile</h2>
+                            <p className="text-xs sm:text-sm text-white/60">
                               Genera il PDF anche se il programma è parziale.
                             </p>
                           </div>
-                          <div className="flex flex-wrap items-center gap-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                             <select
                               value={pdfMonth}
                               onChange={(e) => setPdfMonth(parseInt(e.target.value))}
-                              className="input-field max-w-[180px]"
+                              className="input-field w-full sm:max-w-[180px]"
                             >
                               {Array.from({ length: 12 }, (_, i) => (
                                 <option key={i + 1} value={i + 1}>
@@ -496,7 +513,7 @@ const AdminDashboard = () => {
                             <select
                               value={pdfYear}
                               onChange={(e) => setPdfYear(parseInt(e.target.value))}
-                              className="input-field max-w-[140px]"
+                              className="input-field w-full sm:max-w-[140px]"
                             >
                               <option value={2024}>2024</option>
                               <option value={2025}>2025</option>
@@ -506,7 +523,7 @@ const AdminDashboard = () => {
                             <button
                               onClick={handleExportPdf}
                               disabled={isPdfGenerating}
-                              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-60"
+                              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-60 w-full sm:w-auto"
                             >
                               <FileDown className="w-4 h-4" />
                               {isPdfGenerating ? 'Generazione in corso...' : 'Genera PDF'}
