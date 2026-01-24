@@ -215,86 +215,105 @@ const AdminDashboard = () => {
         return [dateLabel, location, names.join('\n') || ''];
       });
 
-      autoTable(doc, {
-        startY: tableTop,
-        head: [['DATA', 'LUOGO', 'PROCLAMATORI']],
-        body: rows,
-        theme: 'grid',
-        styles: {
-          font: pdfFont,
-          fontSize: 10,
-          textColor: [40, 40, 40],
-          cellPadding: { top: 6, right: 6, bottom: 6, left: 6 },
-          valign: 'middle',
-          lineColor: borderColor,
-          lineWidth: 0.6
-        },
-        headStyles: {
-          fillColor: [85, 85, 85],
-          textColor: [255, 255, 255],
-          fontStyle: 'bolditalic',
-          halign: 'center',
-          lineColor: borderColor,
-          lineWidth: 0.8,
-          minCellHeight: 22
-        },
-        bodyStyles: {
-          fillColor: [255, 255, 255]
-        },
-        columnStyles: {
-          0: { cellWidth: (tableWidth * 150) / 520 },
-          1: { cellWidth: (tableWidth * 220) / 520 },
-          2: { cellWidth: (tableWidth * 150) / 520 }
-        },
-        margin: { left: marginX, right: marginX, top: tableTop, bottom: 24 },
-        didParseCell: (data) => {
-          if (data.section === 'body') {
-            if (data.column.index === 0) {
-              data.cell.styles.halign = 'left';
-              data.cell.styles.fontStyle = 'normal';
+      let tableRendered = false;
+      try {
+        autoTable(doc, {
+          startY: tableTop,
+          head: [['DATA', 'LUOGO', 'PROCLAMATORI']],
+          body: rows,
+          theme: 'grid',
+          styles: {
+            font: pdfFont,
+            fontSize: 10,
+            textColor: [40, 40, 40],
+            cellPadding: { top: 6, right: 6, bottom: 6, left: 6 },
+            valign: 'middle',
+            lineColor: borderColor,
+            lineWidth: 0.6
+          },
+          headStyles: {
+            fillColor: [85, 85, 85],
+            textColor: [255, 255, 255],
+            fontStyle: 'bolditalic',
+            halign: 'center',
+            lineColor: borderColor,
+            lineWidth: 0.8,
+            minCellHeight: 22
+          },
+          bodyStyles: {
+            fillColor: [255, 255, 255]
+          },
+          columnStyles: {
+            0: { cellWidth: (tableWidth * 150) / 520 },
+            1: { cellWidth: (tableWidth * 220) / 520 },
+            2: { cellWidth: (tableWidth * 150) / 520 }
+          },
+          margin: { left: marginX, right: marginX, top: tableTop, bottom: 24 },
+          didParseCell: (data) => {
+            if (data.section === 'body') {
+              if (data.column.index === 0) {
+                data.cell.styles.halign = 'left';
+                data.cell.styles.fontStyle = 'normal';
+              }
+              if (data.column.index === 1) {
+                data.cell.styles.halign = 'center';
+                data.cell.styles.fontStyle = 'normal';
+                data.cell.text = [''];
+              }
+              if (data.column.index === 2) {
+                data.cell.styles.halign = 'right';
+                data.cell.styles.fontStyle = 'normal';
+              }
             }
-            if (data.column.index === 1) {
-              data.cell.styles.halign = 'center';
-              data.cell.styles.fontStyle = 'normal';
-              data.cell.text = [''];
+          },
+          didDrawCell: (data) => {
+            if (data.section === 'body' && data.column.index === 1) {
+              const rawText = Array.isArray(data.cell.raw) ? data.cell.raw.join('\n') : String(data.cell.raw ?? '');
+              const [line1, line2] = rawText.split('\n');
+              const fontSize = data.cell.styles.fontSize || 10;
+              const lineHeight = fontSize * 1.2;
+              const textX = data.cell.x + data.cell.width / 2;
+              const startY = data.cell.y + (data.cell.height - lineHeight * 2) / 2 + fontSize;
+              doc.setTextColor(40, 40, 40);
+              doc.setFont(pdfFont, 'bold');
+              doc.setFontSize(fontSize);
+              doc.text(line1 || '', textX, startY, { align: 'center' });
+              doc.setFont(pdfFont, 'normal');
+              doc.text(line2 || '', textX, startY + lineHeight, { align: 'center' });
             }
-            if (data.column.index === 2) {
-              data.cell.styles.halign = 'right';
-              data.cell.styles.fontStyle = 'normal';
-            }
-          }
-        },
-        didDrawCell: (data) => {
-          if (data.section === 'body' && data.column.index === 1) {
-            const rawText = Array.isArray(data.cell.raw) ? data.cell.raw.join('\n') : String(data.cell.raw ?? '');
-            const [line1, line2] = rawText.split('\n');
-            const fontSize = data.cell.styles.fontSize || 10;
-            const lineHeight = fontSize * 1.2;
-            const textX = data.cell.x + data.cell.width / 2;
-            const startY = data.cell.y + (data.cell.height - lineHeight * 2) / 2 + fontSize;
-            doc.setTextColor(40, 40, 40);
-            doc.setFont(pdfFont, 'bold');
-            doc.setFontSize(fontSize);
-            doc.text(line1 || '', textX, startY, { align: 'center' });
-            doc.setFont(pdfFont, 'normal');
-            doc.text(line2 || '', textX, startY + lineHeight, { align: 'center' });
-          }
-        },
-        didDrawPage: () => {
-          drawHeader();
-          doc.setDrawColor(...borderColor);
-          doc.setLineWidth(0.8);
-          doc.line(marginX, tableTop, marginX + tableWidth, tableTop);
-        },
-        pageBreak: 'auto',
-        rowPageBreak: 'auto'
-      });
+          },
+          didDrawPage: () => {
+            drawHeader();
+            doc.setDrawColor(...borderColor);
+            doc.setLineWidth(0.8);
+            doc.line(marginX, tableTop, marginX + tableWidth, tableTop);
+          },
+          pageBreak: 'auto',
+          rowPageBreak: 'auto'
+        });
+        tableRendered = true;
+      } catch (tableError) {
+        console.error('autoTable error:', tableError);
+      }
 
       const lastTable = (doc as unknown as { lastAutoTable?: { startY: number; finalY: number } }).lastAutoTable;
       if (lastTable) {
         doc.setDrawColor(...borderColor);
         doc.setLineWidth(0.9);
         doc.rect(marginX, lastTable.startY, tableWidth, lastTable.finalY - lastTable.startY, 'S');
+      }
+
+      if (!tableRendered) {
+        drawHeader();
+        doc.setFont(pdfFont, 'normal');
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(11);
+        let y = tableTop + 24;
+        rows.forEach((row) => {
+          const line = `${row[0]}  |  ${String(row[1]).replace('\n', ' ')}  |  ${row[2]}`;
+          doc.text(line, marginX, y);
+          y += 16;
+        });
       }
 
           const pdfName = `programma-${pdfMonth}-${pdfYear}.pdf`;
@@ -310,8 +329,10 @@ const AdminDashboard = () => {
             window.open(blobUrl, '_blank');
           }
       toast.success('PDF generato');
-    } catch (error) {
-      toast.error('Errore durante la generazione del PDF');
+    } catch (error: any) {
+      console.error('PDF generation error:', error);
+      const message = error?.response?.data?.message || error?.message || 'Errore durante la generazione del PDF';
+      toast.error(message);
     } finally {
       setIsPdfGenerating(false);
     }
