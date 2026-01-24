@@ -122,7 +122,7 @@ const Layout = () => {
             </nav>
 
             {/* User Actions */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-3 md:gap-4 flex-wrap justify-end">
               {/* Notifications */}
               <div className="relative">
                 <button
@@ -174,10 +174,10 @@ const Layout = () => {
                 )}
               </div>
 
-              {/* Quick Logout (always visible) */}
+              {/* Quick Logout (mobile) */}
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white/90 transition-colors text-sm font-semibold"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white/90 transition-colors text-sm font-semibold md:hidden"
                 title="Logout"
                 aria-label="Logout"
               >
