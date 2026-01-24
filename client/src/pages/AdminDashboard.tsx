@@ -197,9 +197,15 @@ const AdminDashboard = () => {
       const headerColor: [number, number, number] = [128, 0, 0];
       const borderColor: [number, number, number] = [140, 140, 140];
 
+      const safeRect = (x: number, y: number, w: number, h: number, style: 'S' | 'F') => {
+        if ([x, y, w, h].every((v) => Number.isFinite(v)) && w > 0 && h > 0) {
+          doc.rect(x, y, w, h, style);
+        }
+      };
+
       const drawHeader = () => {
         doc.setFillColor(...headerColor);
-        doc.rect(marginX, headerTop, pageWidth - marginX * 2, headerHeight, 'F');
+        safeRect(marginX, headerTop, pageWidth - marginX * 2, headerHeight, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFont(pdfFont, 'italic');
         doc.setFontSize(16);
@@ -307,7 +313,7 @@ const AdminDashboard = () => {
         if (height > 0) {
           doc.setDrawColor(...borderColor);
           doc.setLineWidth(0.9);
-          doc.rect(marginX, lastTable.startY, tableWidth, height, 'S');
+          safeRect(marginX, lastTable.startY, tableWidth, height, 'S');
         }
       }
 
