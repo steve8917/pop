@@ -173,13 +173,19 @@ const AdminDashboard = () => {
       });
 
       const doc = new jsPDF('p', 'pt', 'a4');
-      doc.addFileToVFS('Lexend-Regular.ttf', lexendRegular.trim());
-      doc.addFont('Lexend-Regular.ttf', 'Lexend', 'normal');
-      doc.addFont('Lexend-Regular.ttf', 'Lexend', 'italic');
-      doc.addFileToVFS('Lexend-Bold.ttf', lexendBold.trim());
-      doc.addFont('Lexend-Bold.ttf', 'Lexend', 'bold');
-      doc.addFont('Lexend-Bold.ttf', 'Lexend', 'bolditalic');
-      doc.setFont('Lexend', 'normal');
+      try {
+        doc.addFileToVFS('Lexend-Regular.ttf', lexendRegular.trim());
+        doc.addFont('Lexend-Regular.ttf', 'Lexend', 'normal');
+        doc.addFont('Lexend-Regular.ttf', 'Lexend', 'italic');
+        doc.addFileToVFS('Lexend-Bold.ttf', lexendBold.trim());
+        doc.addFont('Lexend-Bold.ttf', 'Lexend', 'bold');
+        doc.addFont('Lexend-Bold.ttf', 'Lexend', 'bolditalic');
+      } catch {
+        // fallback to built-in font if Lexend fails to load
+      }
+      const fontList = doc.getFontList();
+      const pdfFont = fontList.Lexend ? 'Lexend' : 'helvetica';
+      doc.setFont(pdfFont, 'normal');
       const pageWidth = doc.internal.pageSize.getWidth();
       const marginX = 22;
       const headerTop = 12;
@@ -195,7 +201,7 @@ const AdminDashboard = () => {
         doc.setFillColor(...headerColor);
         doc.rect(marginX, headerTop, pageWidth - marginX * 2, headerHeight, 'F');
         doc.setTextColor(255, 255, 255);
-        doc.setFont('Lexend', 'italic');
+        doc.setFont(pdfFont, 'italic');
         doc.setFontSize(16);
         doc.text(title, pageWidth / 2, 34, { align: 'center' });
         doc.setFontSize(14);
@@ -215,7 +221,7 @@ const AdminDashboard = () => {
         body: rows,
         theme: 'grid',
         styles: {
-          font: 'Lexend',
+          font: pdfFont,
           fontSize: 10,
           textColor: [40, 40, 40],
           cellPadding: { top: 6, right: 6, bottom: 6, left: 6 },
@@ -267,10 +273,10 @@ const AdminDashboard = () => {
             const textX = data.cell.x + data.cell.width / 2;
             const startY = data.cell.y + (data.cell.height - lineHeight * 2) / 2 + fontSize;
             doc.setTextColor(40, 40, 40);
-            doc.setFont('Lexend', 'bold');
+            doc.setFont(pdfFont, 'bold');
             doc.setFontSize(fontSize);
             doc.text(line1 || '', textX, startY, { align: 'center' });
-            doc.setFont('Lexend', 'normal');
+            doc.setFont(pdfFont, 'normal');
             doc.text(line2 || '', textX, startY + lineHeight, { align: 'center' });
           }
         },
@@ -455,8 +461,8 @@ const AdminDashboard = () => {
                 animate={{ opacity: 1, x: 0 }}
                 className="card"
               >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex-1">
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-bold text-lg text-white">
                         {availability.user.firstName} {availability.user.lastName}
@@ -485,9 +491,9 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-3 w-full">
+                  <div className="flex flex-col gap-3 w-full md:w-auto md:shrink-0 md:items-end">
                     {availability.status === 'pending' ? (
-                      <div className="flex flex-col sm:flex-row gap-2 w-full">
+                      <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                         <button
                           onClick={() => handleUpdateStatus(availability._id, 'confirmed')}
                           className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
@@ -504,8 +510,8 @@ const AdminDashboard = () => {
                         </button>
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-3 w-full">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <div className="flex flex-col gap-3 w-full md:w-auto">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full md:w-auto">
                           <span
                             className={`px-4 py-2 rounded-lg font-medium w-full sm:w-auto text-center ${
                               availability.status === 'confirmed'
