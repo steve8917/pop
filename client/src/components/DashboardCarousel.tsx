@@ -18,6 +18,9 @@ type DashboardCarouselProps = {
 
 const getAttribution = (value?: string) => {
   if (!value) return { text: 'Fonte (opzionale)' };
+  if (/^https?:\/\//i.test(value.trim())) {
+    return { text: value.trim(), href: value.trim() };
+  }
   const hrefMatch = value.match(/href=["']([^"']+)["']/i);
   const textMatch = value.replace(/<[^>]*>/g, '').trim();
   const text = textMatch || value;

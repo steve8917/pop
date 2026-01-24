@@ -297,7 +297,18 @@ const AdminDashboard = () => {
         doc.rect(marginX, lastTable.startY, tableWidth, lastTable.finalY - lastTable.startY, 'S');
       }
 
-      doc.save(`programma-${pdfMonth}-${pdfYear}.pdf`);
+          const pdfName = `programma-${pdfMonth}-${pdfYear}.pdf`;
+          const pdfBlob = doc.output('blob');
+          const blobUrl = URL.createObjectURL(pdfBlob);
+          try {
+            doc.save(pdfName);
+          } catch {
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = pdfName;
+            link.click();
+            window.open(blobUrl, '_blank');
+          }
       toast.success('PDF generato');
     } catch (error) {
       toast.error('Errore durante la generazione del PDF');
@@ -417,7 +428,7 @@ const AdminDashboard = () => {
             <button
               onClick={handleExportPdf}
               disabled={isPdfGenerating}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-60"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-purple-600 text-white hover:bg-purple-700 transition-all disabled:opacity-60"
             >
               <FileDown className="w-4 h-4" />
               {isPdfGenerating ? 'Generazione in corso...' : 'Genera PDF'}
