@@ -6,6 +6,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import api from '../utils/api';
 import { CheckCircle, XCircle, Clock, Trash2, FileDown } from 'lucide-react';
+import lexendRegular from '../assets/fonts/lexend/Lexend-Regular.b64?raw';
+import lexendBold from '../assets/fonts/lexend/Lexend-Bold.b64?raw';
 
 interface Availability {
   _id: string;
@@ -171,31 +173,33 @@ const AdminDashboard = () => {
       });
 
       const doc = new jsPDF('p', 'pt', 'a4');
+      doc.addFileToVFS('Lexend-Regular.ttf', lexendRegular.trim());
+      doc.addFont('Lexend-Regular.ttf', 'Lexend', 'normal');
+      doc.addFont('Lexend-Regular.ttf', 'Lexend', 'italic');
+      doc.addFileToVFS('Lexend-Bold.ttf', lexendBold.trim());
+      doc.addFont('Lexend-Bold.ttf', 'Lexend', 'bold');
+      doc.addFont('Lexend-Bold.ttf', 'Lexend', 'bolditalic');
+      doc.setFont('Lexend', 'normal');
       const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const marginX = 28;
-      const headerHeight = 84;
-      const tableTop = headerHeight + 22;
-      const title = 'Testimonianza Pubblica - Firenze Statuto';
+      const marginX = 22;
+      const headerTop = 12;
+      const headerHeight = 58;
+      const tableTop = headerTop + headerHeight;
+      const tableWidth = pageWidth - marginX * 2;
+      const title = 'Testimonianza Pubblica - FIRENZE STATUTO';
       const subtitle = `${IT_MONTHS[pdfMonth - 1]} ${pdfYear}`;
-      const generatedAt = new Date().toLocaleDateString('it-IT');
+      const headerColor: [number, number, number] = [128, 0, 0];
+      const borderColor: [number, number, number] = [140, 140, 140];
 
       const drawHeader = () => {
-        doc.setFillColor(38, 38, 46);
-        doc.rect(0, 0, pageWidth, headerHeight, 'F');
-        doc.setFillColor(125, 64, 204);
-        doc.rect(0, headerHeight - 6, pageWidth, 6, 'F');
-
+        doc.setFillColor(...headerColor);
+        doc.rect(marginX, headerTop, pageWidth - marginX * 2, headerHeight, 'F');
         doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(18);
+        doc.setFont('Lexend', 'italic');
+        doc.setFontSize(16);
         doc.text(title, pageWidth / 2, 34, { align: 'center' });
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(12);
+        doc.setFontSize(14);
         doc.text(subtitle, pageWidth / 2, 54, { align: 'center' });
-        doc.setTextColor(210, 210, 210);
-        doc.setFontSize(9);
-        doc.text(`Generato il ${generatedAt}`, pageWidth - marginX, 70, { align: 'right' });
       };
 
       const rows = schedules.map((schedule) => {
@@ -207,44 +211,41 @@ const AdminDashboard = () => {
 
       autoTable(doc, {
         startY: tableTop,
-        head: [['DATA', 'LUOGO E ORARIO', 'PROCLAMATORI']],
+        head: [['DATA', 'LUOGO', 'PROCLAMATORI']],
         body: rows,
-        theme: 'striped',
+        theme: 'grid',
         styles: {
-          font: 'helvetica',
-          fontSize: 10.5,
-          textColor: [38, 38, 46],
-          cellPadding: { top: 6, right: 8, bottom: 6, left: 8 },
+          font: 'Lexend',
+          fontSize: 10,
+          textColor: [40, 40, 40],
+          cellPadding: { top: 6, right: 6, bottom: 6, left: 6 },
           valign: 'middle',
-          lineColor: [210, 210, 220],
-          lineWidth: 0.5
+          lineColor: borderColor,
+          lineWidth: 0.6
         },
         headStyles: {
-          fillColor: [58, 58, 70],
+          fillColor: [85, 85, 85],
           textColor: [255, 255, 255],
-          fontStyle: 'bold',
+          fontStyle: 'bolditalic',
           halign: 'center',
-          lineColor: [58, 58, 70],
+          lineColor: borderColor,
           lineWidth: 0.8,
-          minCellHeight: 26
+          minCellHeight: 22
         },
         bodyStyles: {
           fillColor: [255, 255, 255]
         },
-        alternateRowStyles: {
-          fillColor: [246, 246, 250]
-        },
         columnStyles: {
-          0: { cellWidth: 150 },
-          1: { cellWidth: 240 },
-          2: { cellWidth: 150 }
+          0: { cellWidth: (tableWidth * 150) / 520 },
+          1: { cellWidth: (tableWidth * 220) / 520 },
+          2: { cellWidth: (tableWidth * 150) / 520 }
         },
-        margin: { left: marginX, right: marginX, top: tableTop, bottom: 36 },
+        margin: { left: marginX, right: marginX, top: tableTop, bottom: 24 },
         didParseCell: (data) => {
           if (data.section === 'body') {
             if (data.column.index === 0) {
               data.cell.styles.halign = 'left';
-              data.cell.styles.fontStyle = 'bold';
+              data.cell.styles.fontStyle = 'normal';
             }
             if (data.column.index === 1) {
               data.cell.styles.halign = 'center';
@@ -261,29 +262,34 @@ const AdminDashboard = () => {
           if (data.section === 'body' && data.column.index === 1) {
             const rawText = Array.isArray(data.cell.raw) ? data.cell.raw.join('\n') : String(data.cell.raw ?? '');
             const [line1, line2] = rawText.split('\n');
-            const fontSize = data.cell.styles.fontSize || 10.5;
+            const fontSize = data.cell.styles.fontSize || 10;
             const lineHeight = fontSize * 1.2;
             const textX = data.cell.x + data.cell.width / 2;
             const startY = data.cell.y + (data.cell.height - lineHeight * 2) / 2 + fontSize;
-            doc.setTextColor(38, 38, 46);
-            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(40, 40, 40);
+            doc.setFont('Lexend', 'bold');
             doc.setFontSize(fontSize);
             doc.text(line1 || '', textX, startY, { align: 'center' });
-            doc.setFont('helvetica', 'normal');
+            doc.setFont('Lexend', 'normal');
             doc.text(line2 || '', textX, startY + lineHeight, { align: 'center' });
           }
         },
         didDrawPage: () => {
           drawHeader();
-          const pageNumber = doc.getNumberOfPages();
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9);
-          doc.setTextColor(150, 150, 160);
-          doc.text(`Pagina ${pageNumber}`, pageWidth - marginX, pageHeight - 16, { align: 'right' });
+          doc.setDrawColor(...borderColor);
+          doc.setLineWidth(0.8);
+          doc.line(marginX, tableTop, marginX + tableWidth, tableTop);
         },
         pageBreak: 'auto',
         rowPageBreak: 'auto'
       });
+
+      const lastTable = (doc as unknown as { lastAutoTable?: { startY: number; finalY: number } }).lastAutoTable;
+      if (lastTable) {
+        doc.setDrawColor(...borderColor);
+        doc.setLineWidth(0.9);
+        doc.rect(marginX, lastTable.startY, tableWidth, lastTable.finalY - lastTable.startY, 'S');
+      }
 
       doc.save(`programma-${pdfMonth}-${pdfYear}.pdf`);
       toast.success('PDF generato');
@@ -380,6 +386,37 @@ const AdminDashboard = () => {
           >
             Tutte
           </button>
+          <div className="inline-flex items-center gap-2">
+            <select
+              value={pdfMonth}
+              onChange={(e) => setPdfMonth(parseInt(e.target.value))}
+              className="input-field max-w-[160px]"
+            >
+              {Array.from({ length: 12 }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {IT_MONTHS[i]}
+                </option>
+              ))}
+            </select>
+            <select
+              value={pdfYear}
+              onChange={(e) => setPdfYear(parseInt(e.target.value))}
+              className="input-field max-w-[120px]"
+            >
+              <option value={2024}>2024</option>
+              <option value={2025}>2025</option>
+              <option value={2026}>2026</option>
+              <option value={2027}>2027</option>
+            </select>
+            <button
+              onClick={handleExportPdf}
+              disabled={isPdfGenerating}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-60"
+            >
+              <FileDown className="w-4 h-4" />
+              {isPdfGenerating ? 'Generazione in corso...' : 'Genera PDF'}
+            </button>
+          </div>
           <div className="ml-auto flex items-center gap-2 w-full md:w-auto">
             <label className="text-white/80 text-sm">Giorno</label>
             <select
@@ -490,46 +527,6 @@ const AdminDashboard = () => {
                           )}
                         </div>
 
-                        {/* PDF Export */}
-                        <div className="card space-y-3 sm:space-y-4 w-full p-4 sm:p-6">
-                          <div>
-                            <h2 className="text-base sm:text-lg font-semibold text-white">Esporta programma mensile</h2>
-                            <p className="text-xs sm:text-sm text-white/60">
-                              Genera il PDF anche se il programma è parziale.
-                            </p>
-                          </div>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                            <select
-                              value={pdfMonth}
-                              onChange={(e) => setPdfMonth(parseInt(e.target.value))}
-                              className="input-field w-full sm:max-w-[180px]"
-                            >
-                              {Array.from({ length: 12 }, (_, i) => (
-                                <option key={i + 1} value={i + 1}>
-                                  {IT_MONTHS[i]}
-                                </option>
-                              ))}
-                            </select>
-                            <select
-                              value={pdfYear}
-                              onChange={(e) => setPdfYear(parseInt(e.target.value))}
-                              className="input-field w-full sm:max-w-[140px]"
-                            >
-                              <option value={2024}>2024</option>
-                              <option value={2025}>2025</option>
-                              <option value={2026}>2026</option>
-                              <option value={2027}>2027</option>
-                            </select>
-                            <button
-                              onClick={handleExportPdf}
-                              disabled={isPdfGenerating}
-                              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-60 w-full sm:w-auto"
-                            >
-                              <FileDown className="w-4 h-4" />
-                              {isPdfGenerating ? 'Generazione in corso...' : 'Genera PDF'}
-                            </button>
-                          </div>
-                        </div>
                       </div>
                     )}
                   </div>
