@@ -329,8 +329,9 @@ const Schedule = () => {
                     })}
                   </div>
 
-                  {/* Pulsante Chat - visibile solo se il turno è confermato E l'utente è assegnato */}
-                  {schedule.isConfirmed && isUserAssigned(schedule) && (
+                  {/* Pulsante Chat - visibile se l'utente è assegnato e il turno è confermato oppure ci sono almeno 2 fratelli */}
+                  {(schedule.isConfirmed || schedule.assignedUsers.filter((u) => u.gender === 'male').length >= 2) &&
+                    isUserAssigned(schedule) && (
                     <button
                       onClick={() => handleOpenChat(schedule._id)}
                       className="mt-4 w-full btn-primary flex items-center justify-center space-x-2 relative"
