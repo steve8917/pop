@@ -17,7 +17,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: (options?: { silent?: boolean }) => Promise<void>;
   updateUser: (user: User) => void;
 }
 
@@ -83,15 +83,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = async () => {
+  const logout = async (options?: { silent?: boolean }) => {
     try {
       await api.post('/auth/logout');
       setUser(null);
-      toast.success('Logout effettuato');
+      if (!options?.silent) {
+        toast.success('Logout effettuato');
+      }
     } catch (error) {
       // Anche se la chiamata fallisce (es. cookie già scaduto), vogliamo chiudere la sessione lato client.
       setUser(null);
-      console.error('Logout error:', error);
+      if (!options?.silent) {
+        console.error('Logout error:', error);
+      }
     }
   };
 

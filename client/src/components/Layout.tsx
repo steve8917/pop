@@ -2,7 +2,7 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useChat } from '../contexts/ChatContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import cityBg from '../assets/backgrounds/city-dashboard.jpg';
 import {
   Home,
@@ -25,21 +25,24 @@ const Layout = () => {
   const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [sessionTimeout, setSessionTimeout] = useState<number | null>(null);
+  const sessionTimeoutRef = useRef<number | null>(null);
 
   const isDashboardFullBleed = location.pathname === '/dashboard';
+  const layoutStyle = {
+    ['--layout-bg-image' as string]: `url(${cityBg})`
+  };
 
   // Auto logout dopo 10 minuti di inattività
   useEffect(() => {
     const resetTimeout = () => {
-      if (sessionTimeout) clearTimeout(sessionTimeout);
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+      }
 
-      const timeout = setTimeout(() => {
-        logout();
+      sessionTimeoutRef.current = window.setTimeout(async () => {
+        await logout({ silent: true });
         navigate('/login');
       }, 10 * 60 * 1000); // 10 minuti
-
-      setSessionTimeout(timeout);
     };
 
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
@@ -50,12 +53,14 @@ const Layout = () => {
     resetTimeout();
 
     return () => {
-      if (sessionTimeout) clearTimeout(sessionTimeout);
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+      }
       events.forEach((event) => {
         document.removeEventListener(event, resetTimeout);
       });
     };
-  }, []);
+  }, [logout, navigate]);
 
   const handleLogout = async () => {
     await logout();
@@ -75,16 +80,8 @@ const Layout = () => {
   }
 
   return (
-    <div
-      className="layout-dark min-h-screen text-white"
-      style={{
-        backgroundImage:
-          `linear-gradient(180deg, rgba(6,6,18,0.86) 0%, rgba(10,10,24,0.9) 50%, rgba(6,6,18,0.92) 100%), url(${cityBg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center'
-      }}
-    >
-      <div className="min-h-screen bg-black/55 backdrop-blur-[2px]">
+    <div className="layout-dark min-h-screen w-full text-white" style={layoutStyle}>
+      <div className="layout-surface">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-black/25 backdrop-blur-md">
         <div className={isDashboardFullBleed ? 'w-full px-4 sm:px-6 lg:px-10' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'}>
