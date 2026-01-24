@@ -123,9 +123,29 @@ const Schedule = () => {
     }
   };
 
+  const getAssignmentGender = (assignment: ScheduleItem['assignedUsers'][number]) => {
+    if (assignment.gender) return assignment.gender;
+    if (typeof assignment.user !== 'string' && assignment.user?.gender) {
+      return assignment.user.gender;
+    }
+    return undefined;
+  };
+
+  const countGenders = (schedule: ScheduleItem) => {
+    let males = 0;
+    let females = 0;
+
+    schedule.assignedUsers.forEach((assignment) => {
+      const gender = getAssignmentGender(assignment);
+      if (gender === 'male') males += 1;
+      if (gender === 'female') females += 1;
+    });
+
+    return { males, females };
+  };
+
   const getScheduleWarnings = (schedule: ScheduleItem) => {
-    const males = schedule.assignedUsers.filter((u) => u.gender === 'male').length;
-    const females = schedule.assignedUsers.filter((u) => u.gender === 'female').length;
+    const { males, females } = countGenders(schedule);
     const warnings: string[] = [];
 
     if (males < 1) {
@@ -154,6 +174,12 @@ const Schedule = () => {
       console.log('Comparing:', assignedUserId, 'with', user.id);
       return assignedUserId === user.id;
     });
+  };
+
+  const canOpenChat = (schedule: ScheduleItem) => {
+    if (!isUserAssigned(schedule)) return false;
+    const { males } = countGenders(schedule);
+    return schedule.isConfirmed || males >= 2;
   };
 
   const handleOpenChat = (scheduleId: string) => {
@@ -330,8 +356,7 @@ const Schedule = () => {
                   </div>
 
                   {/* Pulsante Chat - visibile se l'utente è assegnato e il turno è confermato oppure ci sono almeno 2 fratelli */}
-                  {(schedule.isConfirmed || schedule.assignedUsers.filter((u) => u.gender === 'male').length >= 2) &&
-                    isUserAssigned(schedule) && (
+                  {canOpenChat(schedule) && (
                     <button
                       onClick={() => handleOpenChat(schedule._id)}
                       className="mt-4 w-full btn-primary flex items-center justify-center space-x-2 relative"
