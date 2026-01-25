@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import api from '../utils/api';
 import { Calendar, MapPin, Clock } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 const SHIFTS = [
   { day: 'monday', location: 'Careggi', startTime: '09:30', endTime: '11:30' },
@@ -33,6 +34,11 @@ const Availability = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedAvailabilities, setSelectedAvailabilities] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setPortalTarget(document.body);
+  }, []);
 
   const getDatesForMonth = () => {
     const dates: { date: Date; shift: typeof SHIFTS[0] }[] = [];
@@ -118,7 +124,7 @@ const Availability = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="page-title">Dai la tua Disponibilità</h1>
         <p className="page-subtitle">Seleziona i turni per cui sei disponibile</p>
@@ -150,22 +156,31 @@ const Availability = () => {
         </div>
       </div>
 
-      {selectedAvailabilities.size > 0 && (
-        <div className="sticky top-20 z-40">
-          <div className="card flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-white/80">
-              Selezionate: <span className="text-white font-semibold">{selectedAvailabilities.size}</span>
+      {selectedAvailabilities.size > 0 && portalTarget &&
+        createPortal(
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="fixed left-0 right-0 bottom-0 z-50 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]"
+          >
+            <div className="mx-auto max-w-4xl">
+              <div className="bg-black/60 border border-white/10 backdrop-blur-md rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl">
+                <div className="text-white/80 text-sm">
+                  Selezionate: <span className="text-white font-semibold">{selectedAvailabilities.size}</span>
+                </div>
+                <button
+                  onClick={handleSubmit}
+                  disabled={isLoading}
+                  className="btn-primary w-full sm:w-auto px-6 py-3 text-base"
+                >
+                  {isLoading ? 'Invio...' : 'Invia disponibilità'}
+                </button>
+              </div>
             </div>
-            <button
-              onClick={handleSubmit}
-              disabled={isLoading}
-              className="btn-primary w-full sm:w-auto px-6 py-3 text-base shadow-2xl"
-            >
-              {isLoading ? 'Invio...' : 'Invia disponibilità'}
-            </button>
-          </div>
-        </div>
-      )}
+          </motion.div>,
+          portalTarget
+        )
+      }
 
       {/* Shifts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

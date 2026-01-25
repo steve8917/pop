@@ -13,6 +13,7 @@ const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [lastChatScheduleId, setLastChatScheduleId] = useState<string | null>(null);
   const location = useLocation();
 
   // Socket.IO per notifiche chat in tempo reale
@@ -27,6 +28,7 @@ const Dashboard = () => {
       socket.on('schedule-message-notification', (data: { scheduleId: string; senderId: string }) => {
         console.log('[DASHBOARD] Ricevuta notifica chat:', data);
         if (data.senderId !== user.id) {
+          setLastChatScheduleId(data.scheduleId);
           // Aggiorna il conteggio reale dei non letti
           fetchUnreadCounts();
         }
@@ -37,11 +39,19 @@ const Dashboard = () => {
       try {
         const { data } = await api.get('/chat-room/unread-counts');
         const unreadCounts = data.unreadCounts || data; // compatibilità con risposta
-        const totalUnread = Object.values(unreadCounts).reduce((acc: number, val: unknown) => acc + (typeof val === 'number' ? val : 0), 0);
+        const totalUnread = Object.values(unreadCounts).reduce(
+          (acc: number, val: unknown) => acc + (typeof val === 'number' ? val : 0),
+          0
+        );
+        const firstWithUnread = Object.entries(unreadCounts)
+          .filter(([, count]) => typeof count === 'number' && count > 0)
+          .sort((a, b) => Number(b[1]) - Number(a[1]))[0]?.[0];
         console.log('[DASHBOARD] Unread count aggiornato:', totalUnread);
         setUnreadChatCount(Number(totalUnread));
+        setLastChatScheduleId(firstWithUnread || null);
       } catch (err) {
         setUnreadChatCount(0);
+        setLastChatScheduleId(null);
       }
     };
     fetchUnreadCounts();
@@ -54,6 +64,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (location.pathname.startsWith('/schedule')) {
       setUnreadChatCount(0);
+      setLastChatScheduleId(null);
     }
   }, [location.pathname]);
 
@@ -105,10 +116,12 @@ const Dashboard = () => {
               <span className="font-semibold text-yellow-100">Hai {unreadChatCount} nuovo/i messaggio/i nelle chat dei turni!</span>
             </div>
             <button
-              onClick={() => navigate('/schedule')}
+              onClick={() =>
+                navigate(lastChatScheduleId ? `/schedule/${lastChatScheduleId}/chat` : '/schedule')
+              }
               className="px-4 py-2 text-sm font-semibold rounded-lg bg-yellow-300 text-black hover:bg-yellow-200 transition-colors"
             >
-              Vai ai Turni
+              Vai alla chat
             </button>
           </motion.div>
         )}
