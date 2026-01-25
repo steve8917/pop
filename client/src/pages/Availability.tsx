@@ -118,7 +118,7 @@ const Availability = () => {
   };
 
   return (
-    <div className="space-y-6 pb-28">
+    <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="page-title">Dai la tua Disponibilità</h1>
         <p className="page-subtitle">Seleziona i turni per cui sei disponibile</p>
@@ -149,6 +149,23 @@ const Availability = () => {
           </select>
         </div>
       </div>
+
+      {selectedAvailabilities.size > 0 && (
+        <div className="sticky top-20 z-40">
+          <div className="card flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-white/80">
+              Selezionate: <span className="text-white font-semibold">{selectedAvailabilities.size}</span>
+            </div>
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="btn-primary w-full sm:w-auto px-6 py-3 text-base shadow-2xl"
+            >
+              {isLoading ? 'Invio...' : 'Invia disponibilità'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Shifts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -206,25 +223,6 @@ const Availability = () => {
       </div>
 
       {/* Submit Button */}
-      {selectedAvailabilities.size > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fixed left-0 right-0 bottom-4 z-40 px-4"
-        >
-          <div className="mx-auto max-w-4xl">
-            <button
-              onClick={handleSubmit}
-              disabled={isLoading}
-              className="btn-primary w-full py-4 text-lg shadow-2xl"
-            >
-              {isLoading
-                ? 'Invio...'
-                : `Invia ${selectedAvailabilities.size} Disponibilità`}
-            </button>
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 };
