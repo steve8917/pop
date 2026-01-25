@@ -19,13 +19,32 @@ import {
 
 const Layout = () => {
   const { user, logout } = useAuth();
-  const { notifications, unreadCount, markAllAsRead, deleteNotification } = useNotifications();
+  const { notifications, unreadCount, markAllAsRead, deleteNotification, markAsRead } = useNotifications();
   const { unreadCount: unreadChatCount } = useChat();
   const navigate = useNavigate();
   const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const sessionTimeoutRef = useRef<number | null>(null);
+
+  const handleNotificationClick = async (notification: {
+    _id: string;
+    type?: string;
+    scheduleId?: string;
+  }) => {
+    if (notification.type === 'chat' && notification.scheduleId) {
+      try {
+        setShowNotifications(false);
+        await markAsRead(notification._id);
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+      }
+      navigate(`/schedule/${notification.scheduleId}/chat`);
+      return;
+    }
+
+    await deleteNotification(notification._id);
+  };
 
   const isDashboardFullBleed = location.pathname === '/dashboard';
   const layoutStyle = {
@@ -157,7 +176,7 @@ const Layout = () => {
                         notifications.map((notification) => (
                           <div
                             key={notification._id}
-                            onClick={() => deleteNotification(notification._id)}
+                            onClick={() => handleNotificationClick(notification)}
                             className={`p-4 cursor-pointer hover:bg-white/5 transition-colors ${
                               !notification.isRead ? 'bg-purple-400/10' : ''
                             }`}

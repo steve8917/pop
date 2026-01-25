@@ -20,6 +20,7 @@ import Message from './models/Message';
 import User from './models/User';
 import ChatRoom from './models/ChatRoom';
 import Schedule from './models/Schedule';
+import Notification from './models/Notification';
 
 // Carica variabili d'ambiente
 dotenv.config();
@@ -316,6 +317,13 @@ io.on('connection', (socket) => {
         // Invia a tutti nella room
         io.to(roomId).emit('schedule-chat-message', lastMessage);
 
+        // Recupera info turno per il testo notifica
+        const scheduleInfo = await Schedule.findById(data.scheduleId).select('date shift');
+        const scheduleLabel = scheduleInfo
+          ? `${scheduleInfo.date.toLocaleDateString('it-IT')} (${scheduleInfo.shift.location})`
+          : 'il tuo turno';
+        const notificationMessage = `Nuovo messaggio nella chat del turno del ${scheduleLabel}`;
+
         // Invia notifica a tutti i partecipanti del turno (anche quelli non nella chat room in questo momento)
         if (chatRoom.participants && chatRoom.participants.length > 0) {
           console.log('📢 Sending notifications to participants:', chatRoom.participants.length);
@@ -324,6 +332,18 @@ io.on('connection', (socket) => {
             console.log(`Checking participant: ${participantIdStr}, sender: ${authUserId}`);
             // Invia notifica solo se non è il mittente
             if (participantIdStr !== authUserId) {
+              try {
+                const created = await Notification.create({
+                  user: participantIdStr,
+                  message: notificationMessage,
+                  type: 'chat',
+                  scheduleId: data.scheduleId
+                });
+                sendRealtimeNotification(participantIdStr, created);
+              } catch (notifyError) {
+                console.error('Errore creazione notifica chat:', notifyError);
+              }
+
               const socketId = connectedUsers.get(participantIdStr);
               console.log(`Participant ${participantIdStr} socket: ${socketId}`);
               if (socketId) {

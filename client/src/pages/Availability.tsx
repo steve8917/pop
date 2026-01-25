@@ -118,7 +118,7 @@ const Availability = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="page-title">Dai la tua Disponibilità</h1>
         <p className="page-subtitle">Seleziona i turni per cui sei disponibile</p>
@@ -210,17 +210,19 @@ const Availability = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="sticky bottom-4"
+          className="fixed left-0 right-0 bottom-4 z-40 px-4"
         >
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="btn-primary w-full py-4 text-lg shadow-2xl"
-          >
-            {isLoading
-              ? 'Invio...'
-              : `Invia ${selectedAvailabilities.size} Disponibilità`}
-          </button>
+          <div className="mx-auto max-w-4xl">
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="btn-primary w-full py-4 text-lg shadow-2xl"
+            >
+              {isLoading
+                ? 'Invio...'
+                : `Invia ${selectedAvailabilities.size} Disponibilità`}
+            </button>
+          </div>
         </motion.div>
       )}
     </div>

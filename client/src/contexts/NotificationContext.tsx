@@ -8,7 +8,8 @@ import { createAppSocket } from '../utils/socket';
 interface Notification {
   _id: string;
   message: string;
-  type: 'availability' | 'confirmation' | 'schedule' | 'general';
+  type: 'availability' | 'confirmation' | 'schedule' | 'general' | 'chat';
+  scheduleId?: string;
   isRead: boolean;
   createdAt: string;
 }
@@ -63,12 +64,24 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 </div>
               </div>
               <div className="flex border-l border-gray-200">
-                <button
-                  onClick={() => toast.dismiss(t.id)}
-                  className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-purple-600 hover:text-purple-500 focus:outline-none"
-                >
-                  Chiudi
-                </button>
+                {notification.type === 'chat' && notification.scheduleId ? (
+                  <button
+                    onClick={() => {
+                      toast.dismiss(t.id);
+                      window.location.href = `/schedule/${notification.scheduleId}/chat`;
+                    }}
+                    className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-purple-600 hover:text-purple-500 focus:outline-none"
+                  >
+                    Apri chat
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => toast.dismiss(t.id)}
+                    className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-purple-600 hover:text-purple-500 focus:outline-none"
+                  >
+                    Chiudi
+                  </button>
+                )}
               </div>
             </div>
           ),

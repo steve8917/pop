@@ -62,7 +62,8 @@ export interface ISchedule extends Document {
 export interface INotification extends Document {
   user: string;
   message: string;
-  type: 'availability' | 'confirmation' | 'schedule' | 'general';
+  type: 'availability' | 'confirmation' | 'schedule' | 'general' | 'chat';
+  scheduleId?: string;
   isRead: boolean;
   createdAt: Date;
 }

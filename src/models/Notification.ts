@@ -14,8 +14,11 @@ const notificationSchema = new Schema<INotification>(
     },
     type: {
       type: String,
-      enum: ['availability', 'confirmation', 'schedule', 'general'],
+      enum: ['availability', 'confirmation', 'schedule', 'general', 'chat'],
       required: true
+    },
+    scheduleId: {
+      type: String
     },
     isRead: {
       type: Boolean,
