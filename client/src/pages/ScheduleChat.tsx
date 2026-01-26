@@ -105,23 +105,16 @@ const ScheduleChat = () => {
 
   const loadSchedule = async () => {
     try {
-      const { data } = await api.get(`/schedule/monthly`, {
-        params: {
-          month: new Date().getMonth() + 1,
-          year: new Date().getFullYear()
-        }
-      });
-
-      const foundSchedule = data.schedules.find((s: Schedule) => s._id === scheduleId);
-      if (foundSchedule) {
-        setSchedule(foundSchedule);
+      const { data } = await api.get(`/schedule/${scheduleId}`);
+      if (data?.schedule) {
+        setSchedule(data.schedule);
       } else {
         toast.error('Turno non trovato');
         navigate('/schedule');
       }
     } catch (error: any) {
       console.error('Errore caricamento turno:', error);
-      toast.error('Errore caricamento turno');
+      toast.error(error?.response?.data?.message || 'Errore caricamento turno');
       navigate('/schedule');
     } finally {
       setIsLoading(false);

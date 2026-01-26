@@ -215,3 +215,46 @@ export const getUserSchedule = async (req: AuthRequest, res: Response): Promise<
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getScheduleById = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userId;
+    const role = req.user?.role;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Autenticazione richiesta' });
+      return;
+    }
+
+    const schedule = await Schedule.findById(id)
+      .populate('assignedUsers.user', '_id firstName lastName gender');
+
+    if (!schedule) {
+      res.status(404).json({ message: 'Turno non trovato' });
+      return;
+    }
+
+    if (role !== 'admin') {
+      const isAssigned = schedule.assignedUsers.some((assignment: any) => {
+        const assignedId = typeof assignment.user === 'string'
+          ? assignment.user
+          : assignment.user?._id?.toString();
+        return assignedId === userId;
+      });
+
+      if (!isAssigned) {
+        res.status(403).json({ message: 'Non sei assegnato a questo turno' });
+        return;
+      }
+    }
+
+    res.json({
+      success: true,
+      schedule
+    });
+  } catch (error: any) {
+    console.error('Errore recupero turno:', error);
+    res.status(500).json({ message: error.message });
+  }
+};

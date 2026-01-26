@@ -4,7 +4,8 @@ import {
   getMonthlySchedule,
   updateSchedule,
   deleteSchedule,
-  getUserSchedule
+  getUserSchedule,
+  getScheduleById
 } from '../controllers/scheduleController';
 import { authenticate, authorize } from '../middleware/auth';
 
@@ -16,6 +17,7 @@ router.use(authenticate);
 router.post('/', authorize('admin'), createSchedule);
 router.get('/monthly', getMonthlySchedule);
 router.get('/my', getUserSchedule);
+router.get('/:id', getScheduleById);
 router.put('/:id', authorize('admin'), updateSchedule);
 router.delete('/:id', authorize('admin'), deleteSchedule);
 
