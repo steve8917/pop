@@ -96,7 +96,7 @@ const DashboardCarousel = ({ slides, autoPlayMs = 6500 }: DashboardCarouselProps
               key={active.id}
               src={active.imageSrc}
               alt={active.imageAlt}
-              className="h-full w-full object-contain"
+              className="h-full w-full object-contain md:object-cover"
               style={{ objectPosition: active.objectPosition || 'center' }}
               initial={{ opacity: 0, scale: 1.02 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -113,7 +113,7 @@ const DashboardCarousel = ({ slides, autoPlayMs = 6500 }: DashboardCarouselProps
             type="button"
             onClick={goPrev}
             aria-label="Slide precedente"
-            className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/35 text-white p-2 hover:bg-black/55 transition-colors backdrop-blur"
+            className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/35 text-white p-2 hover:bg-black/55 transition-colors backdrop-blur md:hidden"
           >
             <ChevronLeft size={20} />
           </button>
@@ -122,7 +122,7 @@ const DashboardCarousel = ({ slides, autoPlayMs = 6500 }: DashboardCarouselProps
             type="button"
             onClick={goNext}
             aria-label="Slide successiva"
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/35 text-white p-2 hover:bg-black/55 transition-colors backdrop-blur"
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/35 text-white p-2 hover:bg-black/55 transition-colors backdrop-blur md:hidden"
           >
             <ChevronRight size={20} />
           </button>
