@@ -96,7 +96,7 @@ const DashboardCarousel = ({ slides, autoPlayMs = 6500 }: DashboardCarouselProps
               key={active.id}
               src={active.imageSrc}
               alt={active.imageAlt}
-              className="h-full w-full object-contain md:object-cover"
+              className="h-full w-full object-contain"
               style={{ objectPosition: active.objectPosition || 'center' }}
               initial={{ opacity: 0, scale: 1.02 }}
               animate={{ opacity: 1, scale: 1 }}
