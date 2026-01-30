@@ -1,18 +1,5 @@
 import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
-
-// Carica variabili d'ambiente se non già caricate
-if (!process.env.EMAIL_HOST) {
-  dotenv.config();
-}
-
-// Debug: stampa le variabili d'ambiente (rimuovere in produzione)
-console.log('📧 Email configuration:');
-console.log('  HOST:', process.env.EMAIL_HOST);
-console.log('  PORT:', process.env.EMAIL_PORT);
-console.log('  USER:', process.env.EMAIL_USER);
-console.log('  PASSWORD:', process.env.EMAIL_PASSWORD ? '***hidden***' : 'NOT SET');
-console.log('  FROM:', process.env.EMAIL_FROM);
+import logger from './logger';
 
 // Crea transporter in modo lazy per assicurarsi che le env vars siano caricate
 const getTransporter = () => {
@@ -42,9 +29,9 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
       subject: options.subject,
       html: options.html
     });
-    console.log(`Email inviata a ${options.to}`);
+    logger.info(`Email inviata a ${options.to}`);
   } catch (error) {
-    console.error('Errore invio email:', error);
+    logger.error('Errore invio email:', error);
     throw new Error('Impossibile inviare email');
   }
 };

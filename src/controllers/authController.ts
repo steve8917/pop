@@ -8,6 +8,7 @@ import Notification from '../models/Notification';
 import { AuthRequest } from '../types';
 import { generateToken, generatePasswordResetToken } from '../utils/jwt';
 import { sendWelcomeEmail, sendPasswordResetEmail, sendVerificationEmail } from '../utils/email';
+import logger from '../utils/logger';
 
 const SESSION_TIMEOUT = parseInt(process.env.SESSION_TIMEOUT || '600000'); // 10 minuti
 
@@ -42,7 +43,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
       await sendVerificationEmail(email, firstName, verificationUrl);
     } catch (emailError) {
-      console.error('Errore invio email verifica:', emailError);
+      logger.error('Errore invio email verifica:', emailError);
       // Non bloccare la registrazione se l'email fallisce
     }
 
@@ -60,7 +61,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       }
     });
   } catch (error: any) {
-    console.error('Errore registrazione:', error);
+    logger.error('Errore registrazione:', error);
     res.status(500).json({ message: error.message || 'Errore durante la registrazione' });
   }
 };
@@ -150,7 +151,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       token
     });
   } catch (error: any) {
-    console.error('Errore login:', error);
+    logger.error('Errore login:', error);
     res.status(500).json({ message: error.message || 'Errore durante il login' });
   }
 };
@@ -175,7 +176,7 @@ export const logout = async (req: AuthRequest, res: Response): Promise<void> => 
     res.clearCookie('token');
     res.json({ success: true, message: 'Logout effettuato con successo' });
   } catch (error: any) {
-    console.error('Errore durante logout:', error);
+    logger.error('Errore durante logout:', error);
     res.clearCookie('token');
     res.json({ success: true, message: 'Logout effettuato con successo' });
   }
@@ -231,7 +232,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       message: 'Email di reset password inviata'
     });
   } catch (error: any) {
-    console.error('Errore forgot password:', error);
+    logger.error('Errore forgot password:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -260,7 +261,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
       message: 'Password reimpostata con successo'
     });
   } catch (error: any) {
-    console.error('Errore reset password:', error);
+    logger.error('Errore reset password:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -291,7 +292,7 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
     try {
       await sendWelcomeEmail(user.email, user.firstName);
     } catch (emailError) {
-      console.error('Errore invio email benvenuto:', emailError);
+      logger.error('Errore invio email benvenuto:', emailError);
     }
 
     res.json({
@@ -299,7 +300,7 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
       message: 'Email verificata con successo! Ora puoi effettuare il login.'
     });
   } catch (error: any) {
-    console.error('Errore verifica email:', error);
+    logger.error('Errore verifica email:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -346,7 +347,7 @@ export const resendVerificationEmail = async (req: Request, res: Response): Prom
       const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
       await sendVerificationEmail(email, user.firstName, verificationUrl);
     } catch (emailError) {
-      console.error('Errore invio email verifica:', emailError);
+      logger.error('Errore invio email verifica:', emailError);
       res.status(500).json({ message: 'Errore durante l\'invio dell\'email' });
       return;
     }
@@ -356,7 +357,7 @@ export const resendVerificationEmail = async (req: Request, res: Response): Prom
       message: 'Email di verifica inviata! Controlla la tua casella di posta.'
     });
   } catch (error: any) {
-    console.error('Errore reinvio email verifica:', error);
+    logger.error('Errore reinvio email verifica:', error);
     res.status(500).json({ message: error.message });
   }
 };

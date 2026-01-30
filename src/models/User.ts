@@ -75,6 +75,12 @@ const userSchema = new Schema<IUser>(
   }
 );
 
+// Indexes per ottimizzare le query
+userSchema.index({ email: 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ emailVerified: 1 });
+userSchema.index({ isActive: 1 });
+
 // Hash password prima del salvataggio
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();

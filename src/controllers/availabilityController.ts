@@ -5,6 +5,7 @@ import Notification from '../models/Notification';
 import Schedule from '../models/Schedule';
 import { AuthRequest } from '../types';
 import { io, sendRealtimeNotification } from '../server';
+import logger from '../utils/logger';
 
 const normalizeDateOnly = (input: unknown): Date => {
   if (typeof input === 'string') {
@@ -103,7 +104,7 @@ export const submitAvailability = async (req: AuthRequest, res: Response): Promi
         }
       }
     } catch (notifyErr) {
-      console.error('Errore notifica admin disponibilità istantanea:', notifyErr);
+      logger.error('Errore notifica admin disponibilità istantanea:', notifyErr);
     }
 
     res.status(201).json({
@@ -112,7 +113,7 @@ export const submitAvailability = async (req: AuthRequest, res: Response): Promi
       availabilities: createdAvailabilities
     });
   } catch (error: any) {
-    console.error('Errore submit disponibilità:', error);
+    logger.error('Errore submit disponibilità:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -219,7 +220,7 @@ export const updateAvailabilityStatus = async (req: AuthRequest, res: Response):
       availability
     });
   } catch (error: any) {
-    console.error('Errore aggiornamento disponibilità:', error);
+    logger.error('Errore aggiornamento disponibilità:', error);
     res.status(500).json({ message: error.message });
   }
 };

@@ -6,8 +6,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import api from '../utils/api';
 import { CheckCircle, XCircle, Clock, Trash2, FileDown } from 'lucide-react';
-import lexendRegular from '../assets/fonts/lexend/Lexend-Regular.b64?raw';
-import lexendBold from '../assets/fonts/lexend/Lexend-Bold.b64?raw';
 
 interface Availability {
   _id: string;
@@ -173,19 +171,6 @@ const AdminDashboard = () => {
       });
 
       const doc = new jsPDF('p', 'pt', 'a4');
-      try {
-        doc.addFileToVFS('Lexend-Regular.ttf', lexendRegular.trim());
-        doc.addFont('Lexend-Regular.ttf', 'Lexend', 'normal');
-        doc.addFont('Lexend-Regular.ttf', 'Lexend', 'italic');
-        doc.addFileToVFS('Lexend-Bold.ttf', lexendBold.trim());
-        doc.addFont('Lexend-Bold.ttf', 'Lexend', 'bold');
-        doc.addFont('Lexend-Bold.ttf', 'Lexend', 'bolditalic');
-      } catch {
-        // fallback to built-in font if Lexend fails to load
-      }
-      const fontList = doc.getFontList();
-      const pdfFont = fontList.Lexend ? 'Lexend' : 'helvetica';
-      doc.setFont(pdfFont, 'normal');
       const pageWidth = doc.internal.pageSize.getWidth();
       const marginX = 22;
       const headerTop = 12;
@@ -197,17 +182,11 @@ const AdminDashboard = () => {
       const headerColor: [number, number, number] = [128, 0, 0];
       const borderColor: [number, number, number] = [140, 140, 140];
 
-      const safeRect = (x: number, y: number, w: number, h: number, style: 'S' | 'F') => {
-        if ([x, y, w, h].every((v) => Number.isFinite(v)) && w > 0 && h > 0) {
-          doc.rect(x, y, w, h, style);
-        }
-      };
-
       const drawHeader = () => {
         doc.setFillColor(...headerColor);
-        safeRect(marginX, headerTop, pageWidth - marginX * 2, headerHeight, 'F');
+        doc.rect(marginX, headerTop, pageWidth - marginX * 2, headerHeight, 'F');
         doc.setTextColor(255, 255, 255);
-        doc.setFont(pdfFont, 'italic');
+        doc.setFont('helvetica', 'italic');
         doc.setFontSize(16);
         doc.text(title, pageWidth / 2, 34, { align: 'center' });
         doc.setFontSize(14);
@@ -221,132 +200,92 @@ const AdminDashboard = () => {
         return [dateLabel, location, names.join('\n') || ''];
       });
 
-      let tableRendered = false;
-      try {
-        autoTable(doc, {
-          startY: tableTop,
-          head: [['DATA', 'LUOGO', 'PROCLAMATORI']],
-          body: rows,
-          theme: 'grid',
-          styles: {
-            font: pdfFont,
-            fontSize: 10,
-            textColor: [40, 40, 40],
-            cellPadding: { top: 6, right: 6, bottom: 6, left: 6 },
-            valign: 'middle',
-            lineColor: borderColor,
-            lineWidth: 0.6
-          },
-          headStyles: {
-            fillColor: [85, 85, 85],
-            textColor: [255, 255, 255],
-            fontStyle: 'bolditalic',
-            halign: 'center',
-            lineColor: borderColor,
-            lineWidth: 0.8,
-            minCellHeight: 22
-          },
-          bodyStyles: {
-            fillColor: [255, 255, 255]
-          },
-          columnStyles: {
-            0: { cellWidth: (tableWidth * 150) / 520 },
-            1: { cellWidth: (tableWidth * 220) / 520 },
-            2: { cellWidth: (tableWidth * 150) / 520 }
-          },
-          margin: { left: marginX, right: marginX, top: tableTop, bottom: 24 },
-          didParseCell: (data) => {
-            if (data.section === 'body') {
-              if (data.column.index === 0) {
-                data.cell.styles.halign = 'left';
-                data.cell.styles.fontStyle = 'normal';
-              }
-              if (data.column.index === 1) {
-                data.cell.styles.halign = 'center';
-                data.cell.styles.fontStyle = 'normal';
-                data.cell.text = [''];
-              }
-              if (data.column.index === 2) {
-                data.cell.styles.halign = 'right';
-                data.cell.styles.fontStyle = 'normal';
-              }
+      const tableOptions: any = {
+        startY: tableTop,
+        head: [['DATA', 'LUOGO', 'PROCLAMATORI']],
+        body: rows,
+        theme: 'grid',
+        styles: {
+          font: 'helvetica',
+          fontSize: 10,
+          textColor: [40, 40, 40],
+          cellPadding: { top: 6, right: 6, bottom: 6, left: 6 },
+          valign: 'middle',
+          lineColor: borderColor,
+          lineWidth: 0.6
+        },
+        headStyles: {
+          fillColor: [85, 85, 85],
+          textColor: [255, 255, 255],
+          fontStyle: 'bolditalic',
+          halign: 'center',
+          lineColor: borderColor,
+          lineWidth: 0.8,
+          minCellHeight: 22
+        },
+        bodyStyles: {
+          fillColor: [255, 255, 255]
+        },
+        columnStyles: {
+          0: { cellWidth: (tableWidth * 150) / 520 },
+          1: { cellWidth: (tableWidth * 220) / 520 },
+          2: { cellWidth: (tableWidth * 150) / 520 }
+        },
+        margin: { left: marginX, right: marginX, top: tableTop, bottom: 24 },
+        didParseCell: (data: any) => {
+          if (data.section === 'body') {
+            if (data.column.index === 0) {
+              data.cell.styles.halign = 'left';
+              data.cell.styles.fontStyle = 'normal';
             }
-          },
-          didDrawCell: (data) => {
-            if (data.section === 'body' && data.column.index === 1) {
-              const rawText = Array.isArray(data.cell.raw) ? data.cell.raw.join('\n') : String(data.cell.raw ?? '');
-              const [line1, line2] = rawText.split('\n');
-              const fontSize = data.cell.styles.fontSize || 10;
-              const lineHeight = fontSize * 1.2;
-              const textX = data.cell.x + data.cell.width / 2;
-              const startY = data.cell.y + (data.cell.height - lineHeight * 2) / 2 + fontSize;
-              doc.setTextColor(40, 40, 40);
-              doc.setFont(pdfFont, 'bold');
-              doc.setFontSize(fontSize);
-              doc.text(line1 || '', textX, startY, { align: 'center' });
-              doc.setFont(pdfFont, 'normal');
-              doc.text(line2 || '', textX, startY + lineHeight, { align: 'center' });
+            if (data.column.index === 1) {
+              data.cell.styles.halign = 'center';
+              data.cell.styles.fontStyle = 'normal';
+              data.cell.text = [''];
             }
-          },
-          didDrawPage: () => {
-            drawHeader();
-            doc.setDrawColor(...borderColor);
-            doc.setLineWidth(0.8);
-            doc.line(marginX, tableTop, marginX + tableWidth, tableTop);
-          },
-          pageBreak: 'auto',
-          rowPageBreak: 'auto'
-        });
-        tableRendered = true;
-      } catch (tableError) {
-        console.error('autoTable error:', tableError);
-      }
-
-      const lastTable = (doc as unknown as { lastAutoTable?: { startY: number; finalY: number } }).lastAutoTable;
-      if (
-        lastTable &&
-        Number.isFinite(lastTable.startY) &&
-        Number.isFinite(lastTable.finalY) &&
-        Number.isFinite(tableWidth)
-      ) {
-        const height = lastTable.finalY - lastTable.startY;
-        if (height > 0) {
+            if (data.column.index === 2) {
+              data.cell.styles.halign = 'right';
+              data.cell.styles.fontStyle = 'normal';
+            }
+          }
+        },
+        didDrawCell: (data: any) => {
+          if (data.section === 'body' && data.column.index === 1) {
+            const rawText = Array.isArray(data.cell.raw) ? data.cell.raw.join('\n') : String(data.cell.raw ?? '');
+            const [line1, line2] = rawText.split('\n');
+            const fontSize = data.cell.styles.fontSize || 10;
+            const lineHeight = fontSize * 1.2;
+            const textX = data.cell.x + data.cell.width / 2;
+            const startY = data.cell.y + (data.cell.height - lineHeight * 2) / 2 + fontSize;
+            doc.setTextColor(40, 40, 40);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(fontSize);
+            doc.text(line1 || '', textX, startY, { align: 'center' });
+            doc.setFont('helvetica', 'normal');
+            doc.text(line2 || '', textX, startY + lineHeight, { align: 'center' });
+          }
+        },
+        didDrawPage: () => {
+          drawHeader();
+          doc.setDrawColor(...borderColor);
+          doc.setLineWidth(0.8);
+          doc.line(marginX, tableTop, marginX + tableWidth, tableTop);
+        },
+        didDrawTable: (data: any) => {
           doc.setDrawColor(...borderColor);
           doc.setLineWidth(0.9);
-          safeRect(marginX, lastTable.startY, tableWidth, height, 'S');
-        }
-      }
+          doc.rect(marginX, tableTop, tableWidth, data.table.height, 'S');
+        },
+        pageBreak: 'auto',
+        rowPageBreak: 'auto'
+      };
 
-      if (!tableRendered) {
-        drawHeader();
-        doc.setFont(pdfFont, 'normal');
-        doc.setTextColor(40, 40, 40);
-        doc.setFontSize(11);
-        let y = tableTop + 24;
-        rows.forEach((row) => {
-          const line = `${row[0]}  |  ${String(row[1]).replace('\n', ' ')}  |  ${row[2]}`;
-          doc.text(line, marginX, y);
-          y += 16;
-        });
-      }
+      autoTable(doc, tableOptions);
 
-          const pdfName = `programma-${pdfMonth}-${pdfYear}.pdf`;
-          const pdfBlob = doc.output('blob');
-          const blobUrl = URL.createObjectURL(pdfBlob);
-          try {
-            doc.save(pdfName);
-          } catch {
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = pdfName;
-            link.click();
-            window.open(blobUrl, '_blank');
-          }
+      doc.save(`programma-${pdfMonth}-${pdfYear}.pdf`);
       toast.success('PDF generato');
-    } catch (error: any) {
-      console.error('PDF generation error:', error);
-      const message = error?.response?.data?.message || error?.message || 'Errore durante la generazione del PDF';
-      toast.error(message);
+    } catch (error) {
+      toast.error('Errore durante la generazione del PDF');
     } finally {
       setIsPdfGenerating(false);
     }
@@ -438,37 +377,6 @@ const AdminDashboard = () => {
           >
             Tutte
           </button>
-          <div className="inline-flex items-center gap-2">
-            <select
-              value={pdfMonth}
-              onChange={(e) => setPdfMonth(parseInt(e.target.value))}
-              className="input-field max-w-[160px]"
-            >
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {IT_MONTHS[i]}
-                </option>
-              ))}
-            </select>
-            <select
-              value={pdfYear}
-              onChange={(e) => setPdfYear(parseInt(e.target.value))}
-              className="input-field max-w-[120px]"
-            >
-              <option value={2024}>2024</option>
-              <option value={2025}>2025</option>
-              <option value={2026}>2026</option>
-              <option value={2027}>2027</option>
-            </select>
-            <button
-              onClick={handleExportPdf}
-              disabled={isPdfGenerating}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-purple-600 text-white hover:bg-purple-700 transition-all disabled:opacity-60"
-            >
-              <FileDown className="w-4 h-4" />
-              {isPdfGenerating ? 'Generazione in corso...' : 'Genera PDF'}
-            </button>
-          </div>
           <div className="ml-auto flex items-center gap-2 w-full md:w-auto">
             <label className="text-white/80 text-sm">Giorno</label>
             <select
@@ -507,8 +415,8 @@ const AdminDashboard = () => {
                 animate={{ opacity: 1, x: 0 }}
                 className="card"
               >
-                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-bold text-lg text-white">
                         {availability.user.firstName} {availability.user.lastName}
@@ -537,9 +445,9 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-3 w-full md:w-auto md:shrink-0 md:items-end">
+                  <div className="flex flex-col gap-3 w-full">
                     {availability.status === 'pending' ? (
-                      <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                      <div className="flex flex-col sm:flex-row gap-2 w-full">
                         <button
                           onClick={() => handleUpdateStatus(availability._id, 'confirmed')}
                           className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
@@ -556,8 +464,8 @@ const AdminDashboard = () => {
                         </button>
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-3 w-full md:w-auto">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full md:w-auto">
+                      <div className="flex flex-col gap-3 w-full">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                           <span
                             className={`px-4 py-2 rounded-lg font-medium w-full sm:w-auto text-center ${
                               availability.status === 'confirmed'
@@ -579,6 +487,46 @@ const AdminDashboard = () => {
                           )}
                         </div>
 
+                        {/* PDF Export */}
+                        <div className="card space-y-3 sm:space-y-4 w-full p-4 sm:p-6">
+                          <div>
+                            <h2 className="text-base sm:text-lg font-semibold text-white">Esporta programma mensile</h2>
+                            <p className="text-xs sm:text-sm text-white/60">
+                              Genera il PDF anche se il programma è parziale.
+                            </p>
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                            <select
+                              value={pdfMonth}
+                              onChange={(e) => setPdfMonth(parseInt(e.target.value))}
+                              className="input-field w-full sm:max-w-[180px]"
+                            >
+                              {Array.from({ length: 12 }, (_, i) => (
+                                <option key={i + 1} value={i + 1}>
+                                  {IT_MONTHS[i]}
+                                </option>
+                              ))}
+                            </select>
+                            <select
+                              value={pdfYear}
+                              onChange={(e) => setPdfYear(parseInt(e.target.value))}
+                              className="input-field w-full sm:max-w-[140px]"
+                            >
+                              <option value={2024}>2024</option>
+                              <option value={2025}>2025</option>
+                              <option value={2026}>2026</option>
+                              <option value={2027}>2027</option>
+                            </select>
+                            <button
+                              onClick={handleExportPdf}
+                              disabled={isPdfGenerating}
+                              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-60 w-full sm:w-auto"
+                            >
+                              <FileDown className="w-4 h-4" />
+                              {isPdfGenerating ? 'Generazione in corso...' : 'Genera PDF'}
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

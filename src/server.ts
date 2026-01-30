@@ -9,6 +9,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { connectDatabase } from './config/database';
 import { errorHandler } from './middleware/errorHandler';
+import { validateEnv } from './config/validateEnv';
+import logger from './utils/logger';
 import { verifyToken } from './utils/jwt';
 import authRoutes from './routes/authRoutes';
 import availabilityRoutes from './routes/availabilityRoutes';
@@ -24,6 +26,9 @@ import Notification from './models/Notification';
 
 // Carica variabili d'ambiente
 dotenv.config();
+
+// Valida che tutte le variabili richieste siano presenti
+validateEnv();
 
 const app = express();
 app.disable('x-powered-by');
@@ -44,13 +49,28 @@ const io = new Server(httpServer, {
 // Middleware
 app.use(
   helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173'],
+        fontSrc: ["'self'", 'data:'],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"]
+      }
+    },
     crossOriginEmbedderPolicy: false
   })
 );
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL
+    : 'http://localhost:5173',
+  credentials: true,
+  optionsSuccessStatus: 200
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -143,24 +163,24 @@ const connectedUsers = new Map<string, string>();
 const chatUsers = new Set<string>();
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  logger.debug(`User connected: ${socket.id}`);
 
   // Autenticazione per notifiche
   socket.on('authenticate', (userId: string) => {
     const authUserId = socket.data.user?.userId;
     if (!authUserId || authUserId !== userId) {
-      console.warn('Socket authenticate mismatch');
+      logger.warn('Socket authenticate mismatch');
       return;
     }
     connectedUsers.set(authUserId, socket.id);
-    console.log(`User ${authUserId} authenticated with socket ${socket.id}`);
+    logger.info(`User ${authUserId} authenticated with socket ${socket.id}`);
   });
 
   // Join chat
   socket.on('join-chat', async (userId: string) => {
     const authUserId = socket.data.user?.userId;
     if (!authUserId || authUserId !== userId) {
-      console.warn('Socket join-chat unauthorized');
+      logger.warn('Socket join-chat unauthorized');
       return;
     }
     chatUsers.add(socket.id);
@@ -178,7 +198,7 @@ io.on('connection', (socket) => {
 
       socket.emit('chat-history', messages.reverse());
     } catch (error) {
-      console.error('Errore caricamento messaggi:', error);
+      logger.error('Errore caricamento messaggi:', error);
     }
   });
 
@@ -187,7 +207,7 @@ io.on('connection', (socket) => {
     try {
       const authUserId = socket.data.user?.userId;
       if (!authUserId || authUserId !== data.userId) {
-        console.warn('Socket send-message unauthorized');
+        logger.warn('Socket send-message unauthorized');
         return;
       }
       const newMessage = await Message.create({
@@ -201,7 +221,7 @@ io.on('connection', (socket) => {
       // Invia a tutti gli utenti connessi
       io.emit('chat-message', populatedMessage);
     } catch (error) {
-      console.error('Errore invio messaggio:', error);
+      logger.error('Errore invio messaggio:', error);
     }
   });
 
@@ -210,12 +230,12 @@ io.on('connection', (socket) => {
     try {
       const authUserId = socket.data.user?.userId;
       if (!authUserId || authUserId !== data.userId) {
-        console.warn('Socket join-schedule-chat unauthorized');
+        logger.warn('Socket join-schedule-chat unauthorized');
         return;
       }
       const roomId = `schedule-${data.scheduleId}`;
       socket.join(roomId);
-      console.log(`User ${authUserId} joined room ${roomId}`);
+      logger.debug(`User ${authUserId} joined room ${roomId}`);
 
       // Carica o crea la chat room
       let chatRoom = await ChatRoom.findOne({ schedule: data.scheduleId })
@@ -244,7 +264,7 @@ io.on('connection', (socket) => {
         userId: authUserId
       });
     } catch (error) {
-      console.error('Errore join schedule chat:', error);
+      logger.error('Errore join schedule chat:', error);
     }
   });
 
@@ -252,12 +272,12 @@ io.on('connection', (socket) => {
   socket.on('leave-schedule-chat', (data: { scheduleId: string; userId: string }) => {
     const authUserId = socket.data.user?.userId;
     if (!authUserId || authUserId !== data.userId) {
-      console.warn('Socket leave-schedule-chat unauthorized');
+      logger.warn('Socket leave-schedule-chat unauthorized');
       return;
     }
     const roomId = `schedule-${data.scheduleId}`;
     socket.leave(roomId);
-    console.log(`User ${authUserId} left room ${roomId}`);
+    logger.debug(`User ${authUserId} left room ${roomId}`);
 
     // Notifica partecipanti che qualcuno è uscito
     socket.to(roomId).emit('user-left-schedule-chat', {
@@ -275,7 +295,7 @@ io.on('connection', (socket) => {
     try {
       const authUserId = socket.data.user?.userId;
       if (!authUserId || authUserId !== data.userId) {
-        console.warn('Socket send-schedule-message unauthorized');
+        logger.warn('Socket send-schedule-message unauthorized');
         return;
       }
       const roomId = `schedule-${data.scheduleId}`;
@@ -312,7 +332,7 @@ io.on('connection', (socket) => {
 
         const lastMessage = updatedChatRoom?.messages[updatedChatRoom.messages.length - 1];
 
-        console.log('Sending message to room:', roomId, lastMessage);
+        logger.debug('Sending message to room:', { roomId, messageId: lastMessage?._id });
 
         // Invia a tutti nella room
         io.to(roomId).emit('schedule-chat-message', lastMessage);
@@ -326,10 +346,9 @@ io.on('connection', (socket) => {
 
         // Invia notifica a tutti i partecipanti del turno (anche quelli non nella chat room in questo momento)
         if (chatRoom.participants && chatRoom.participants.length > 0) {
-          console.log('📢 Sending notifications to participants:', chatRoom.participants.length);
+          logger.debug(`Sending notifications to ${chatRoom.participants.length} participants`);
           for (const participantId of chatRoom.participants) {
             const participantIdStr = participantId.toString();
-            console.log(`Checking participant: ${participantIdStr}, sender: ${authUserId}`);
             // Invia notifica solo se non è il mittente
             if (participantIdStr !== authUserId) {
               try {
@@ -341,28 +360,25 @@ io.on('connection', (socket) => {
                 });
                 sendRealtimeNotification(participantIdStr, created);
               } catch (notifyError) {
-                console.error('Errore creazione notifica chat:', notifyError);
+                logger.error('Errore creazione notifica chat:', notifyError);
               }
 
               const socketId = connectedUsers.get(participantIdStr);
-              console.log(`Participant ${participantIdStr} socket: ${socketId}`);
               if (socketId) {
-                console.log(`✅ Sending notification to ${participantIdStr} via socket ${socketId}`);
+                logger.debug(`Sending notification to ${participantIdStr} via socket`);
                 io.to(socketId).emit('schedule-message-notification', {
                   scheduleId: data.scheduleId,
                   senderId: authUserId
                 });
-              } else {
-                console.log(`⚠️ Participant ${participantIdStr} not connected`);
               }
             } else {
-              console.log(`⏭️ Skipping sender ${participantIdStr}`);
+              logger.debug(`Skipping notification for sender ${participantIdStr}`);
             }
           }
         }
       }
     } catch (error) {
-      console.error('Errore invio messaggio schedule:', error);
+      logger.error('Errore invio messaggio schedule:', error);
     }
   });
 
@@ -373,7 +389,7 @@ io.on('connection', (socket) => {
     for (const [userId, socketId] of connectedUsers.entries()) {
       if (socketId === socket.id) {
         connectedUsers.delete(userId);
-        console.log(`User ${userId} disconnected`);
+        logger.debug(`User ${userId} disconnected`);
         break;
       }
     }
@@ -395,11 +411,11 @@ const startServer = async () => {
   try {
     await connectDatabase();
     httpServer.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`Server running on port ${PORT}`);
+      logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 };
