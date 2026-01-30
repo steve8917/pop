@@ -1,4 +1,5 @@
 # 🔒 Correzioni di Sicurezza e Best Practices Implementate
+<!-- Trigger deploy: dummy change 2026-01-30 -->
 
 ## Data: 30 Gennaio 2026
 
