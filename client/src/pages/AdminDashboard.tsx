@@ -426,7 +426,7 @@ const AdminDashboard = () => {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm text-white/70">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-white/70">
                       <div>
                         <span className="font-medium text-white/80">Data:</span>{' '}
                         {date.toLocaleDateString('it-IT')}
