@@ -192,8 +192,8 @@ export const getUserSchedule = async (req: AuthRequest, res: Response): Promise<
     }
 
     let query: any = {
-      'assignedUsers.user': userId,
-      isConfirmed: true
+      'assignedUsers.user': userId
+      // Rimosso il filtro isConfirmed per mostrare tutti i turni anche con una sola persona
     };
 
     if (month && year) {
